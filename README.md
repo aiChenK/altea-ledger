@@ -2,6 +2,12 @@
 
 这是一个专为龙之谷（Dragon Nest）游戏玩家打造的**高密度、暗黑磨砂玻璃风格 (Glassmorphism)** 的角色周常与日常状态记录管理系统。它完全取代了繁琐难用的传统 Excel 表格，提供更直观的多角色对比、自动周期重置、在线配置管理及周常历史归档备份功能。
 
+### 📸 界面预览
+
+| 主界面 (Main Tracker) | 配置管理面板 (Configuration Panel) |
+| :---: | :---: |
+| ![主界面](screenshots/main_interface.png) | ![配置管理面板](screenshots/config_panel.png) |
+
 ---
 
 ## ✨ 核心特性

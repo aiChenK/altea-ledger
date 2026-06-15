@@ -1,9 +1,11 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0f111a" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>阿尔特里亚大陆考勤簿</title>
 </head>
@@ -11,6 +13,19 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => {
+            console.log('PWA ServiceWorker 注册成功:', reg.scope);
+          })
+          .catch((err) => {
+            console.error('PWA ServiceWorker 注册失败:', err);
+          });
+      });
+    }
+  </script>
 </body>
 
 </html>

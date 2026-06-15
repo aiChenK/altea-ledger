@@ -2,6 +2,12 @@
 
 This is a **high-density, dark frosted glass (Glassmorphism) style** character weekly and daily status tracking system designed specifically for Dragon Nest players. It completely replaces cumbersome, hard-to-use traditional Excel sheets, providing a more intuitive multi-character comparison, automatic cycle reset, online configuration management, and weekly history archiving & backup features.
 
+### 📸 Preview
+
+| Main Tracker | Configuration Panel |
+| :---: | :---: |
+| ![Main Tracker](screenshots/main_interface.png) | ![Configuration Panel](screenshots/config_panel.png) |
+
 ---
 
 ## ✨ Core Features
