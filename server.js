@@ -421,7 +421,16 @@ app.post('/api/save', (req, res) => {
 // 保存配置接口（并在保存后重新校准数据 structure）
 app.post('/api/config', (req, res) => {
   const { configPath, dataPath, historyPath } = getOrInitUserFiles(req.nickname);
-  const newConfig = req.body;
+  
+  let newConfig = req.body;
+  let renameMap = null;
+
+  // 支持新 payload 格式以适配角色改名：{ config, renameMap }
+  if (req.body && req.body.config && req.body.config.roles) {
+    newConfig = req.body.config;
+    renameMap = req.body.renameMap;
+  }
+
   if (!newConfig || !newConfig.roles || !newConfig.weeklies) {
     return res.status(400).json({ error: '无效的配置格式' });
   }
@@ -429,6 +438,43 @@ app.post('/api/config', (req, res) => {
   saveJsonFile(configPath, newConfig);
 
   const data = readJsonFile(dataPath);
+
+  // 如果提供了重命名映射，并且数据中存在角色列表，进行重命名
+  if (renameMap && data.characters) {
+    for (const [oldName, newName] of Object.entries(renameMap)) {
+      if (oldName !== newName && data.characters[oldName]) {
+        console.log(`[改名] 用户 "${req.nickname}"：角色名从 "${oldName}" 重命名为 "${newName}"`);
+        data.characters[newName] = data.characters[oldName];
+        delete data.characters[oldName];
+      }
+    }
+  }
+
+  // 同步替换历史记录文件中的角色名
+  if (renameMap && fs.existsSync(historyPath)) {
+    try {
+      let history = JSON.parse(fs.readFileSync(historyPath, 'utf-8') || '[]');
+      let historyChanged = false;
+      for (const item of history) {
+        if (item.snapshot && item.snapshot.characters) {
+          for (const [oldName, newName] of Object.entries(renameMap)) {
+            if (oldName !== newName && item.snapshot.characters[oldName]) {
+              item.snapshot.characters[newName] = item.snapshot.characters[oldName];
+              delete item.snapshot.characters[oldName];
+              historyChanged = true;
+            }
+          }
+        }
+      }
+      if (historyChanged) {
+        saveJsonFile(historyPath, history);
+        console.log(`[改名] 历史归档中的角色名已成功同步更新`);
+      }
+    } catch (e) {
+      console.error('[改名] 同步更新历史归档中的角色名失败:', e);
+    }
+  }
+
   // 用新配置进行结构校准
   alignDataStructure(data, newConfig);
   

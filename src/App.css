@@ -138,6 +138,27 @@
   left: 0;
   z-index: 10;
   border-right: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.15s ease;
+}
+
+/* 鼠标悬停行突出显示，明确对应关卡 */
+.tracker-table tbody tr:not(.row-divider) {
+  transition: background-color 0.15s ease;
+}
+
+.tracker-table tbody tr:not(.row-divider):hover {
+  background: rgba(192, 132, 252, 0.06);
+}
+
+.tracker-table tbody tr:not(.row-divider):hover td {
+  background: rgba(192, 132, 252, 0.02);
+}
+
+.tracker-table tbody tr:not(.row-divider):hover .col-item-name {
+  background: linear-gradient(90deg, rgba(32, 25, 48, 0.98) 0%, rgba(45, 33, 68, 0.98) 100%) !important;
+  color: #c084fc !important;
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 0 #c084fc;
 }
 
 /* 角色头部列宽缩减 (极窄化) */
@@ -574,6 +595,30 @@
   flex: 1;
   padding: 4px 8px;
   font-size: 0.8rem;
+}
+
+/* 角色重命名输入框 */
+.role-edit-input {
+  background: transparent !important;
+  border: none !important;
+  color: #fff;
+  font-size: 0.8rem;
+  padding: 2px 4px !important;
+  width: 80%;
+  max-width: 200px;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.role-edit-input:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.role-edit-input:focus {
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 1px rgba(192, 132, 252, 0.3) !important;
 }
 
 .config-list-item {

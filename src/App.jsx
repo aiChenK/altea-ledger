@@ -23,6 +23,8 @@ function App() {
   const [newRoleInput, setNewRoleInput] = useState('');
   const [newWeeklyInput, setNewWeeklyInput] = useState({ name: '', key: '', baseCount: 1 });
   const [draggedWeeklyIndex, setDraggedWeeklyIndex] = useState(null);
+  const [rolesWithId, setRolesWithId] = useState([]);
+  const [draggedRoleIndex, setDraggedRoleIndex] = useState(null);
 
   // 历史记录状态
   const [historyList, setHistoryList] = useState([]);
@@ -398,21 +400,55 @@ function App() {
     });
   };
 
-  // 11. 配置抽屉的增删改查
-  const handleRemoveRole = (role) => {
-    const updatedRoles = drawerConfig.roles.filter(r => r !== role);
-    setDrawerConfig({ ...drawerConfig, roles: updatedRoles });
+  // 11. 配置抽屉的增删改查（角色管理升级支持拖拽排序与改名）
+  const handleOpenConfigDrawer = () => {
+    const cloned = JSON.parse(JSON.stringify(config));
+    setDrawerConfig(cloned);
+    setRolesWithId(cloned.roles.map(r => ({ id: r, name: r })));
+    setIsConfigDrawerOpen(true);
+  };
+
+  const handleRemoveRole = (id) => {
+    setRolesWithId(rolesWithId.filter(r => r.id !== id));
   };
 
   const handleAddRole = () => {
     if (!newRoleInput.trim()) return;
-    if (drawerConfig.roles.includes(newRoleInput.trim())) {
+    const trimmed = newRoleInput.trim();
+    if (rolesWithId.some(r => r.name === trimmed)) {
       showToast('该角色已存在', 'warning');
       return;
     }
-    const updatedRoles = [...drawerConfig.roles, newRoleInput.trim()];
-    setDrawerConfig({ ...drawerConfig, roles: updatedRoles });
+    const newId = `new_role_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    setRolesWithId([...rolesWithId, { id: newId, name: trimmed }]);
     setNewRoleInput('');
+  };
+
+  const handleRenameRole = (id, newName) => {
+    setRolesWithId(rolesWithId.map(r => r.id === id ? { ...r, name: newName } : r));
+  };
+
+  const handleRoleDragStart = (e, index) => {
+    setDraggedRoleIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index);
+  };
+
+  const handleRoleDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedRoleIndex === null || draggedRoleIndex === index) return;
+
+    const updatedRoles = [...rolesWithId];
+    const draggedItem = updatedRoles[draggedRoleIndex];
+    updatedRoles.splice(draggedRoleIndex, 1);
+    updatedRoles.splice(index, 0, draggedItem);
+
+    setDraggedRoleIndex(index);
+    setRolesWithId(updatedRoles);
+  };
+
+  const handleRoleDragEnd = () => {
+    setDraggedRoleIndex(null);
   };
 
   const handleRemoveWeekly = (key) => {
@@ -446,21 +482,44 @@ function App() {
   };
 
   const handleSaveConfig = async () => {
+    const names = rolesWithId.map(r => r.name.trim()).filter(Boolean);
+    const uniqueNames = new Set(names);
+    if (uniqueNames.size !== names.length) {
+      showToast('角色名称不能重复且不能为空', 'warning');
+      return;
+    }
+
+    // 生成改名映射 renameMap
+    const renameMap = {};
+    rolesWithId.forEach(r => {
+      if (!r.id.startsWith('new_role_') && r.id !== r.name.trim()) {
+        renameMap[r.id] = r.name.trim();
+      }
+    });
+
+    const finalConfig = {
+      ...drawerConfig,
+      roles: names
+    };
+
     try {
       const res = await authFetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(drawerConfig)
+        body: JSON.stringify({
+          config: finalConfig,
+          renameMap
+        })
       });
       const result = await res.json();
       if (result.success) {
-        if (drawerConfig.adminPassword !== undefined) {
-          localStorage.setItem('altea_ledger_password', drawerConfig.adminPassword);
+        if (finalConfig.adminPassword !== undefined) {
+          localStorage.setItem('altea_ledger_password', finalConfig.adminPassword);
         }
         setConfig(result.config);
         setData(result.data);
         setIsConfigDrawerOpen(false);
-        showToast('配置修改成功！已安全清理数据。', 'success');
+        showToast('配置修改成功！角色数据已安全迁移。', 'success');
       }
     } catch (err) {
       console.error(err);
@@ -666,7 +725,7 @@ function App() {
             📅
           </button>
           <button className="btn-icon" title="历史记录" onClick={handleOpenHistory}>⏳</button>
-          <button className="btn-icon" title="设置" onClick={() => setIsConfigDrawerOpen(true)}>⚙️</button>
+          <button className="btn-icon" title="设置" onClick={handleOpenConfigDrawer}>⚙️</button>
         </div>
       </header>
 
@@ -1114,13 +1173,35 @@ function App() {
             {/* 角色管理 */}
             <div className="config-section">
               <h3>角色管理</h3>
-              <div className="roles-tags">
-                {drawerConfig.roles.map(r => (
-                  <div className="role-tag" key={r}>
-                    <span>{r}</span>
-                    <button className="btn-remove-tag" onClick={() => handleRemoveRole(r)}>×</button>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '250px', overflowY: 'auto', paddingRight: '4px' }}>
+                {rolesWithId.map((r, index) => {
+                  const isDragging = index === draggedRoleIndex;
+                  return (
+                    <div
+                      className={`config-list-item ${isDragging ? 'dragging' : ''}`}
+                      key={r.id}
+                      draggable
+                      onDragStart={(e) => handleRoleDragStart(e, index)}
+                      onDragOver={(e) => handleRoleDragOver(e, index)}
+                      onDragEnd={handleRoleDragEnd}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
+                        <span className="drag-handle" title="拖动排序">⋮⋮</span>
+                        <input
+                          type="text"
+                          className="role-edit-input"
+                          value={r.name}
+                          onChange={(e) => handleRenameRole(r.id, e.target.value)}
+                          draggable={false}
+                          onDragStart={(e) => e.preventDefault()}
+                        />
+                      </div>
+                      <div className="config-list-item-actions" onDragStart={(e) => e.preventDefault()} draggable={false}>
+                        <button className="btn-delete-item" onClick={() => handleRemoveRole(r.id)}>删除</button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               <div className="add-input-group">
                 <input

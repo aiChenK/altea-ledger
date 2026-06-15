@@ -7,8 +7,8 @@
   "maxHistoryCount": 50,
   "roles": [
     "角色1",
-    "角色2",
     "角色3",
+    "角色2",
     "角色4"
   ],
   "assets": [
