@@ -996,32 +996,34 @@ function App() {
               <h2>⏳ 历史周常存档</h2>
               <button style={{ fontSize: '1.5rem' }} onClick={() => setIsHistoryDrawerOpen(false)}>×</button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
-              {historyList.length === 0 ? (
-                <div style={{ textAlign: 'center', opacity: 0.4, padding: '40px 0', fontSize: '0.9rem' }}>
-                  暂无已保存的周常历史存档
-                </div>
-              ) : (
-                historyList.map(item => (
-                  <div className="config-list-item" key={item.id}>
-                    <div>
-                      <div style={{ fontWeight: '600' }}>
-                        {new Date(item.resetTime).toLocaleString('zh-CN', { hour12: false })}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', opacity: 0.4, marginTop: 2 }}>
-                        归档角色数: {Object.keys(item.snapshot.characters).length} 个
-                      </div>
-                    </div>
-                    <button
-                      className="btn-primary"
-                      style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                      onClick={() => setSelectedHistoryItem(item)}
-                    >
-                      👁️ 查看
-                    </button>
+            <div className="drawer-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {historyList.length === 0 ? (
+                  <div style={{ textAlign: 'center', opacity: 0.4, padding: '40px 0', fontSize: '0.9rem' }}>
+                    暂无已保存的周常历史存档
                   </div>
-                ))
-              )}
+                ) : (
+                  historyList.map(item => (
+                    <div className="config-list-item" key={item.id}>
+                      <div>
+                        <div style={{ fontWeight: '600' }}>
+                          {new Date(item.resetTime).toLocaleString('zh-CN', { hour12: false })}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.4, marginTop: 2 }}>
+                          归档角色数: {Object.keys(item.snapshot.characters).length} 个
+                        </div>
+                      </div>
+                      <button
+                        className="btn-primary"
+                        style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                        onClick={() => setSelectedHistoryItem(item)}
+                      >
+                        👁️ 查看
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1179,216 +1181,220 @@ function App() {
               <button style={{ fontSize: '1.5rem' }} onClick={() => setIsConfigDrawerOpen(false)}>×</button>
             </div>
 
-            {/* 角色管理 */}
-            <div className="config-section">
-              <h3>角色管理</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '250px', overflowY: 'auto', paddingRight: '4px' }}>
-                {rolesWithId.map((r, index) => {
-                  const isDragging = index === draggedRoleIndex;
-                  return (
-                    <div
-                      className={`config-list-item ${isDragging ? 'dragging' : ''}`}
-                      key={r.id}
-                      draggable
-                      onDragStart={(e) => handleRoleDragStart(e, index)}
-                      onDragOver={(e) => handleRoleDragOver(e, index)}
-                      onDragEnd={handleRoleDragEnd}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
-                        <span className="drag-handle" title="拖动排序">⋮⋮</span>
-                        <input
-                          type="text"
-                          className="role-edit-input"
-                          value={r.name}
-                          onChange={(e) => handleRenameRole(r.id, e.target.value)}
-                          draggable={false}
-                          onDragStart={(e) => e.preventDefault()}
-                        />
-                      </div>
-                      <div className="config-list-item-actions" onDragStart={(e) => e.preventDefault()} draggable={false}>
-                        <button className="btn-delete-item" onClick={() => handleRemoveRole(r.id)}>删除</button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="add-input-group">
-                <input
-                  type="text"
-                  placeholder="新角色名称"
-                  value={newRoleInput}
-                  onChange={(e) => setNewRoleInput(e.target.value)}
-                />
-                <button className="btn-primary" style={{ padding: '6px 14px' }} onClick={handleAddRole}>新增</button>
-              </div>
-            </div>
-
-            {/* 关卡管理 */}
-            <div className="config-section">
-              <h3>周常关卡配置</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '250px', overflowY: 'auto', paddingRight: '4px' }}>
-                {drawerConfig.weeklies.map((w, index) => {
-                  const isDragging = index === draggedWeeklyIndex;
-                  return (
-                    <div
-                      className={`config-list-item ${isDragging ? 'dragging' : ''}`}
-                      key={w.key}
-                      draggable
-                      onDragStart={(e) => handleWeeklyDragStart(e, index)}
-                      onDragOver={(e) => handleWeeklyDragOver(e, index)}
-                      onDragEnd={handleWeeklyDragEnd}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span className="drag-handle" title="拖动排序">⋮⋮</span>
-                        <span>{w.name} <span style={{ opacity: 0.4, fontSize: '0.8rem' }}>({w.key})</span></span>
-                      </div>
-                      <div className="config-list-item-actions" onDragStart={(e) => e.preventDefault()} draggable={false}>
-                        <div className="count-adjuster">
-                          <button className="btn-count-adjust" onClick={() => handleAdjustWeeklyBaseCount(w.key, -1)}>-</button>
-                          <span>基准:{w.baseCount}</span>
-                          <button className="btn-count-adjust" onClick={() => handleAdjustWeeklyBaseCount(w.key, 1)}>+</button>
+            <div className="drawer-body">
+              {/* 角色管理 */}
+              <div className="config-section">
+                <h3>角色管理</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '250px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {rolesWithId.map((r, index) => {
+                    const isDragging = index === draggedRoleIndex;
+                    return (
+                      <div
+                        className={`config-list-item ${isDragging ? 'dragging' : ''}`}
+                        key={r.id}
+                        draggable
+                        onDragStart={(e) => handleRoleDragStart(e, index)}
+                        onDragOver={(e) => handleRoleDragOver(e, index)}
+                        onDragEnd={handleRoleDragEnd}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
+                          <span className="drag-handle" title="拖动排序">⋮⋮</span>
+                          <input
+                            type="text"
+                            className="role-edit-input"
+                            value={r.name}
+                            onChange={(e) => handleRenameRole(r.id, e.target.value)}
+                            draggable={false}
+                            onDragStart={(e) => e.preventDefault()}
+                          />
                         </div>
-                        <button className="btn-delete-item" onClick={() => handleRemoveWeekly(w.key)}>删除</button>
+                        <div className="config-list-item-actions" onDragStart={(e) => e.preventDefault()} draggable={false}>
+                          <button className="btn-delete-item" onClick={() => handleRemoveRole(r.id)}>删除</button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="add-input-group" style={{ marginTop: '8px' }}>
-                <input
-                  type="text"
-                  placeholder="关卡中文名 (如: 绿龙)"
-                  value={newWeeklyInput.name}
-                  onChange={(e) => setNewWeeklyInput({ ...newWeeklyInput, name: e.target.value })}
-                  style={{ width: '40%' }}
-                />
-                <input
-                  type="text"
-                  placeholder="英文Key (如: green)"
-                  value={newWeeklyInput.key}
-                  onChange={(e) => setNewWeeklyInput({ ...newWeeklyInput, key: e.target.value })}
-                  style={{ width: '35%' }}
-                />
-                <input
-                  type="number"
-                  placeholder="基准数"
-                  value={newWeeklyInput.baseCount}
-                  onChange={(e) => setNewWeeklyInput({ ...newWeeklyInput, baseCount: Number(e.target.value) || 1 })}
-                  style={{ width: '20%' }}
-                />
-                <button className="btn-primary" style={{ padding: '6px' }} onClick={handleAddWeekly}>添加</button>
-              </div>
-            </div>
-
-            {/* 重置时间配置 */}
-            <div className="config-section">
-              <h3>重置规则配置</h3>
-              <div className="reset-inputs-row">
-                <div className="input-label-group">
-                  <label>每日重置时间（点）</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="23"
-                    value={drawerConfig.resetConfig.dailyResetHour}
-                    onChange={(e) => setDrawerConfig({
-                      ...drawerConfig,
-                      resetConfig: { ...drawerConfig.resetConfig, dailyResetHour: Number(e.target.value) }
-                    })}
-                  />
-                </div>
-                <div className="input-label-group">
-                  <label>每周重置星期（6=周六）</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="6"
-                    value={drawerConfig.resetConfig.weeklyResetDay}
-                    onChange={(e) => setDrawerConfig({
-                      ...drawerConfig,
-                      resetConfig: { ...drawerConfig.resetConfig, weeklyResetDay: Number(e.target.value) }
-                    })}
-                  />
-                </div>
-              </div>
-              <div className="reset-inputs-row" style={{ marginTop: 8 }}>
-                <div className="input-label-group">
-                  <label>每周重置时间（点）</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="23"
-                    value={drawerConfig.resetConfig.weeklyResetHour}
-                    onChange={(e) => setDrawerConfig({
-                      ...drawerConfig,
-                      resetConfig: { ...drawerConfig.resetConfig, weeklyResetHour: Number(e.target.value) }
-                    })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 历史版本配置区块 */}
-            <div className="config-section">
-              <h3>历史归档与上限设置</h3>
-              <div className="input-label-group">
-                <label>最多保留历史版本数量（上限）</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="200"
-                  value={drawerConfig.maxHistoryCount || 50}
-                  onChange={(e) => setDrawerConfig({
-                    ...drawerConfig,
-                    maxHistoryCount: Number(e.target.value) || 50
+                    );
                   })}
-                />
+                </div>
+                <div className="add-input-group">
+                  <input
+                    type="text"
+                    placeholder="新角色名称"
+                    value={newRoleInput}
+                    onChange={(e) => setNewRoleInput(e.target.value)}
+                  />
+                  <button className="btn-primary" style={{ padding: '6px 14px' }} onClick={handleAddRole}>新增</button>
+                </div>
               </div>
-              <div style={{ marginTop: '6px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.06)' }}>
-                <button
-                  className="btn-danger"
-                  style={{ width: '100%', padding: '6px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '6px', fontSize: '0.78rem' }}
-                  onClick={() => triggerConfirm({
-                    title: '🗑️ 清空所有历史归档',
-                    message: '警告：确定要彻底清空所有的每周历史归档记录吗？该操作不可撤销！',
-                    confirmText: '彻底清空',
-                    danger: true,
-                    onConfirm: handleClearAllHistory
-                  })}
-                >
-                  🗑️ 清空所有历史归档记录
-                </button>
-              </div>
-            </div>
 
-            {/* 安全验证与密码设置 */}
-            <div className="config-section">
-              <h3>安全与访问密码设置</h3>
-              <div className="input-label-group">
-                {isMultiUser ? (
-                  <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.45)', padding: '6px 0', lineHeight: '1.4' }}>
-                    👥 多用户模式下，访问密码由系统管理员在环境变量 <code>USERS_AUTH</code> 中统一配置，此处不支持自助修改。
-                  </div>
-                ) : (
-                  <>
-                    <label>系统访问密码（留空表示不需要密码验证）</label>
+              {/* 关卡管理 */}
+              <div className="config-section">
+                <h3>周常关卡配置</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '250px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {drawerConfig.weeklies.map((w, index) => {
+                    const isDragging = index === draggedWeeklyIndex;
+                    return (
+                      <div
+                        className={`config-list-item ${isDragging ? 'dragging' : ''}`}
+                        key={w.key}
+                        draggable
+                        onDragStart={(e) => handleWeeklyDragStart(e, index)}
+                        onDragOver={(e) => handleWeeklyDragOver(e, index)}
+                        onDragEnd={handleWeeklyDragEnd}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="drag-handle" title="拖动排序">⋮⋮</span>
+                          <span>{w.name} <span style={{ opacity: 0.4, fontSize: '0.8rem' }}>({w.key})</span></span>
+                        </div>
+                        <div className="config-list-item-actions" onDragStart={(e) => e.preventDefault()} draggable={false}>
+                          <div className="count-adjuster">
+                            <button className="btn-count-adjust" onClick={() => handleAdjustWeeklyBaseCount(w.key, -1)}>-</button>
+                            <span>基准:{w.baseCount}</span>
+                            <button className="btn-count-adjust" onClick={() => handleAdjustWeeklyBaseCount(w.key, 1)}>+</button>
+                          </div>
+                          <button className="btn-delete-item" onClick={() => handleRemoveWeekly(w.key)}>删除</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="add-input-group" style={{ marginTop: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder="关卡中文名 (如: 绿龙)"
+                    value={newWeeklyInput.name}
+                    onChange={(e) => setNewWeeklyInput({ ...newWeeklyInput, name: e.target.value })}
+                    style={{ width: '40%' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="英文Key (如: green)"
+                    value={newWeeklyInput.key}
+                    onChange={(e) => setNewWeeklyInput({ ...newWeeklyInput, key: e.target.value })}
+                    style={{ width: '35%' }}
+                  />
+                  <input
+                    type="number"
+                    placeholder="基准数"
+                    value={newWeeklyInput.baseCount}
+                    onChange={(e) => setNewWeeklyInput({ ...newWeeklyInput, baseCount: Number(e.target.value) || 1 })}
+                    style={{ width: '20%' }}
+                  />
+                  <button className="btn-primary" style={{ padding: '6px' }} onClick={handleAddWeekly}>添加</button>
+                </div>
+              </div>
+
+              {/* 重置时间配置 */}
+              <div className="config-section">
+                <h3>重置规则配置</h3>
+                <div className="reset-inputs-row">
+                  <div className="input-label-group">
+                    <label>每日重置时间（点）</label>
                     <input
-                      type="password"
-                      placeholder="留空表示免密直接访问"
-                      value={drawerConfig.adminPassword || ''}
+                      type="number"
+                      min="0"
+                      max="23"
+                      value={drawerConfig.resetConfig.dailyResetHour}
                       onChange={(e) => setDrawerConfig({
                         ...drawerConfig,
-                        adminPassword: e.target.value
+                        resetConfig: { ...drawerConfig.resetConfig, dailyResetHour: Number(e.target.value) }
                       })}
                     />
-                  </>
-                )}
+                  </div>
+                  <div className="input-label-group">
+                    <label>每周重置星期（6=周六）</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="6"
+                      value={drawerConfig.resetConfig.weeklyResetDay}
+                      onChange={(e) => setDrawerConfig({
+                        ...drawerConfig,
+                        resetConfig: { ...drawerConfig.resetConfig, weeklyResetDay: Number(e.target.value) }
+                      })}
+                    />
+                  </div>
+                </div>
+                <div className="reset-inputs-row" style={{ marginTop: 8 }}>
+                  <div className="input-label-group">
+                    <label>每周重置时间（点）</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="23"
+                      value={drawerConfig.resetConfig.weeklyResetHour}
+                      onChange={(e) => setDrawerConfig({
+                        ...drawerConfig,
+                        resetConfig: { ...drawerConfig.resetConfig, weeklyResetHour: Number(e.target.value) }
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 历史版本配置区块 */}
+              <div className="config-section">
+                <h3>历史归档与上限设置</h3>
+                <div className="input-label-group">
+                  <label>最多保留历史版本数量（上限）</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="200"
+                    value={drawerConfig.maxHistoryCount || 50}
+                    onChange={(e) => setDrawerConfig({
+                      ...drawerConfig,
+                      maxHistoryCount: Number(e.target.value) || 50
+                    })}
+                  />
+                </div>
+                <div style={{ marginTop: '6px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.06)' }}>
+                  <button
+                    className="btn-danger"
+                    style={{ width: '100%', padding: '6px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '6px', fontSize: '0.78rem' }}
+                    onClick={() => triggerConfirm({
+                      title: '🗑️ 清空所有历史归档',
+                      message: '警告：确定要彻底清空所有的每周历史归档记录吗？该操作不可撤销！',
+                      confirmText: '彻底清空',
+                      danger: true,
+                      onConfirm: handleClearAllHistory
+                    })}
+                  >
+                    🗑️ 清空所有历史归档记录
+                  </button>
+                </div>
+              </div>
+
+              {/* 安全验证与密码设置 */}
+              <div className="config-section">
+                <h3>安全与访问密码设置</h3>
+                <div className="input-label-group">
+                  {isMultiUser ? (
+                    <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.45)', padding: '6px 0', lineHeight: '1.4' }}>
+                      👥 多用户模式下，访问密码由系统管理员在环境变量 <code>USERS_AUTH</code> 中统一配置，此处不支持自助修改。
+                    </div>
+                  ) : (
+                    <>
+                      <label>系统访问密码（留空表示不需要密码验证）</label>
+                      <input
+                        type="password"
+                        placeholder="留空表示免密直接访问"
+                        value={drawerConfig.adminPassword || ''}
+                        onChange={(e) => setDrawerConfig({
+                          ...drawerConfig,
+                          adminPassword: e.target.value
+                        })}
+                      />
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            <button className="btn-save-config btn-primary" onClick={handleSaveConfig}>
-              保存并应用新配置
-            </button>
+            <div className="drawer-footer">
+              <button className="btn-save-config btn-primary" onClick={handleSaveConfig}>
+                保存并应用新配置
+              </button>
+            </div>
           </div>
         </div>
       )}
