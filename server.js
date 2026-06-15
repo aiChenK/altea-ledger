@@ -20,19 +20,182 @@ const configPath = path.join(dataDir, 'config.json');
 const dataPath = path.join(dataDir, 'data.json');
 const historyPath = path.join(dataDir, 'history.json');
 
+// 默认游戏配置，用作 config.json 缺失或损坏时的备选
+const DEFAULT_CONFIG = {
+  resetConfig: {
+    dailyResetHour: 9,
+    weeklyResetDay: 6,
+    weeklyResetHour: 9
+  },
+  maxHistoryCount: 50,
+  roles: [
+    "风行",
+    "影舞",
+    "圣徒",
+    "冰灵",
+    "剑皇",
+    "药剂",
+    "灵魂"
+  ],
+  assets: [
+    {
+      key: "gold",
+      name: "金币",
+      type: "number"
+    },
+    {
+      key: "fashion",
+      name: "时装",
+      type: "number"
+    },
+    {
+      key: "goldenGoose",
+      name: "黄金鹅",
+      type: "datetime"
+    }
+  ],
+  dailies: [
+    {
+      key: "checkin",
+      name: "签到",
+      type: "boolean"
+    },
+    {
+      key: "potion",
+      name: "喝药",
+      type: "boolean"
+    },
+    {
+      key: "dailyQuest",
+      name: "每日",
+      type: "boolean"
+    },
+    {
+      key: "lucky",
+      name: "幸运",
+      type: "boolean"
+    },
+    {
+      key: "afk",
+      name: "挂机",
+      type: "stage",
+      maxStage: 4
+    }
+  ],
+  weeklies: [
+    {
+      key: "warehouse",
+      name: "仓库",
+      baseCount: 1
+    },
+    {
+      key: "expedition70",
+      name: "远征70",
+      baseCount: 1
+    },
+    {
+      key: "dragonAbyss",
+      name: "龙渊",
+      baseCount: 1
+    },
+    {
+      key: "greenDragonHard",
+      name: "绿龙硬核",
+      baseCount: 1
+    },
+    {
+      key: "greenDragonClassic",
+      name: "绿龙经典",
+      baseCount: 1
+    },
+    {
+      key: "sandDragonClassic",
+      name: "沙龙经典",
+      baseCount: 1
+    },
+    {
+      key: "guardian",
+      name: "守卫者",
+      baseCount: 2
+    },
+    {
+      key: "trial",
+      name: "试炼",
+      baseCount: 1
+    },
+    {
+      key: "blackDragonP1",
+      name: "黑龙P1",
+      baseCount: 1
+    },
+    {
+      key: "blackDragonP2",
+      name: "黑龙P2",
+      baseCount: 1
+    },
+    {
+      key: "blackDragonP3",
+      name: "黑龙P3",
+      baseCount: 1
+    },
+    {
+      key: "typhoonKimHell",
+      name: "台风金地狱",
+      baseCount: 1
+    },
+    {
+      key: "profKHell",
+      name: "K博士地狱",
+      baseCount: 1
+    }
+  ]
+};
+
 // 辅助函数：读取并校验 JSON 文件
 function readJsonFile(filePath, defaultContent = {}) {
+  const isConfig = filePath === configPath;
+  const actualDefault = isConfig ? DEFAULT_CONFIG : defaultContent;
+
   try {
     if (!fs.existsSync(filePath)) {
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
-      fs.writeFileSync(filePath, JSON.stringify(defaultContent, null, 2), 'utf-8');
-      return defaultContent;
+      fs.writeFileSync(filePath, JSON.stringify(actualDefault, null, 2), 'utf-8');
+      return JSON.parse(JSON.stringify(actualDefault));
     }
     const data = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+
+    // 如果读取的是配置文件，我们需要进行完整性校验以避免属性缺失崩溃
+    if (isConfig) {
+      let needsFix = false;
+      if (!parsed.roles || !Array.isArray(parsed.roles)) {
+        parsed.roles = [...DEFAULT_CONFIG.roles];
+        needsFix = true;
+      }
+      if (!parsed.assets || !Array.isArray(parsed.assets)) {
+        parsed.assets = [...DEFAULT_CONFIG.assets];
+        needsFix = true;
+      }
+      if (!parsed.dailies || !Array.isArray(parsed.dailies)) {
+        parsed.dailies = [...DEFAULT_CONFIG.dailies];
+        needsFix = true;
+      }
+      if (!parsed.weeklies || !Array.isArray(parsed.weeklies)) {
+        parsed.weeklies = [...DEFAULT_CONFIG.weeklies];
+        needsFix = true;
+      }
+      if (!parsed.resetConfig || typeof parsed.resetConfig !== 'object') {
+        parsed.resetConfig = { ...DEFAULT_CONFIG.resetConfig };
+        needsFix = true;
+      }
+      if (needsFix) {
+        fs.writeFileSync(filePath, JSON.stringify(parsed, null, 2), 'utf-8');
+      }
+    }
+    return parsed;
   } catch (err) {
     console.error(`读取文件失败: ${filePath}`, err);
-    return defaultContent;
+    return JSON.parse(JSON.stringify(actualDefault));
   }
 }
 
@@ -52,9 +215,9 @@ function saveJsonFile(filePath, content) {
 function getSystemPassword() {
   const config = readJsonFile(configPath);
   if (config && config.adminPassword !== undefined) {
-    return config.adminPassword;
+    return String(config.adminPassword).trim();
   }
-  return process.env.ADMIN_PASSWORD || '';
+  return (process.env.ADMIN_PASSWORD || '').trim();
 }
 
 // 密码验证中间件
@@ -65,21 +228,18 @@ function authMiddleware(req, res, next) {
     return next();
   }
 
-  // 检测接口本身不拦截
-  if (req.path === '/api/auth-check') {
+  // 检测接口本身不拦截 (同时支持子路由匹配和完整Url匹配)
+  if (req.path === '/auth-check' || req.originalUrl === '/api/auth-check') {
     return next();
   }
 
   // 提取客户端提供的凭证
   const authHeader = req.headers['authorization'];
-  let clientPassword = '';
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    clientPassword = authHeader.substring(7);
-  } else {
-    clientPassword = req.headers['x-admin-password'] || '';
-  }
+  const clientPassword = (authHeader && authHeader.startsWith('Bearer '))
+    ? authHeader.substring(7)
+    : (req.headers['x-admin-password'] || '');
 
-  if (clientPassword === sysPassword) {
+  if (clientPassword.trim() === sysPassword) {
     return next();
   }
 
@@ -95,14 +255,11 @@ app.get('/api/auth-check', (req, res) => {
   const hasPassword = !!sysPassword;
 
   const authHeader = req.headers['authorization'];
-  let clientPassword = '';
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    clientPassword = authHeader.substring(7);
-  } else {
-    clientPassword = req.headers['x-admin-password'] || '';
-  }
+  const clientPassword = (authHeader && authHeader.startsWith('Bearer '))
+    ? authHeader.substring(7)
+    : (req.headers['x-admin-password'] || '');
 
-  const isCorrect = !hasPassword || (clientPassword === sysPassword);
+  const isCorrect = !hasPassword || (clientPassword.trim() === sysPassword);
 
   res.json({
     needPassword: hasPassword,
