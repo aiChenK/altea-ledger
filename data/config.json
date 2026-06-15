@@ -1,0 +1,129 @@
+{
+  "resetConfig": {
+    "dailyResetHour": 9,
+    "weeklyResetDay": 6,
+    "weeklyResetHour": 9
+  },
+  "maxHistoryCount": 50,
+  "roles": [
+    "风行",
+    "影舞",
+    "圣徒",
+    "冰灵",
+    "剑皇",
+    "药剂",
+    "灵魂"
+  ],
+  "assets": [
+    {
+      "key": "gold",
+      "name": "金币",
+      "type": "number"
+    },
+    {
+      "key": "fashion",
+      "name": "时装",
+      "type": "number"
+    },
+    {
+      "key": "goldenGoose",
+      "name": "黄金鹅",
+      "type": "datetime"
+    }
+  ],
+  "dailies": [
+    {
+      "key": "checkin",
+      "name": "签到",
+      "type": "boolean"
+    },
+    {
+      "key": "potion",
+      "name": "喝药",
+      "type": "boolean"
+    },
+    {
+      "key": "dailyQuest",
+      "name": "每日",
+      "type": "boolean"
+    },
+    {
+      "key": "lucky",
+      "name": "幸运",
+      "type": "boolean"
+    },
+    {
+      "key": "afk",
+      "name": "挂机",
+      "type": "stage",
+      "maxStage": 4
+    }
+  ],
+  "weeklies": [
+    {
+      "key": "warehouse",
+      "name": "仓库",
+      "baseCount": 1
+    },
+    {
+      "key": "expedition70",
+      "name": "远征70",
+      "baseCount": 1
+    },
+    {
+      "key": "dragonAbyss",
+      "name": "龙渊",
+      "baseCount": 1
+    },
+    {
+      "key": "greenDragonHard",
+      "name": "绿龙硬核",
+      "baseCount": 1
+    },
+    {
+      "key": "greenDragonClassic",
+      "name": "绿龙经典",
+      "baseCount": 1
+    },
+    {
+      "key": "sandDragonClassic",
+      "name": "沙龙经典",
+      "baseCount": 1
+    },
+    {
+      "key": "guardian",
+      "name": "守卫者",
+      "baseCount": 2
+    },
+    {
+      "key": "trial",
+      "name": "试炼",
+      "baseCount": 1
+    },
+    {
+      "key": "blackDragonP1",
+      "name": "黑龙P1",
+      "baseCount": 1
+    },
+    {
+      "key": "blackDragonP2",
+      "name": "黑龙P2",
+      "baseCount": 1
+    },
+    {
+      "key": "blackDragonP3",
+      "name": "黑龙P3",
+      "baseCount": 1
+    },
+    {
+      "key": "typhoonKimHell",
+      "name": "台风金地狱",
+      "baseCount": 1
+    },
+    {
+      "key": "profKHell",
+      "name": "K博士地狱",
+      "baseCount": 1
+    }
+  ]
+}

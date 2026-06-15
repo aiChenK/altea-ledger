@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  altea-ledger:
+    image: aichenk/altea-ledger:latest
+    container_name: altea-ledger
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai
+      - PORT=3001
+      - ADMIN_PASSWORD=  # 访问密码，留空表示免密模式。可在环境变量配置或在此设定
+    restart: always
