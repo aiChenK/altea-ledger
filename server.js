@@ -215,31 +215,129 @@ function saveJsonFile(filePath, content) {
 function getSystemPassword() {
   const config = readJsonFile(configPath);
   if (config && config.adminPassword !== undefined) {
-    return String(config.adminPassword).trim();
+    return config.adminPassword;
   }
-  return (process.env.ADMIN_PASSWORD || '').trim();
+  return process.env.ADMIN_PASSWORD || '';
 }
 
-// 密码验证中间件
+// 解析多用户配置，格式为: nickname1:passwd1,nickname2:passwd2
+function parseUsersAuth() {
+  const authStr = process.env.USERS_AUTH || '';
+  if (!authStr) return {};
+
+  const users = {};
+  const pairs = authStr.split(',');
+  for (const pair of pairs) {
+    const parts = pair.split(':');
+    if (parts.length === 2) {
+      const nickname = parts[0].trim();
+      const password = parts[1].trim();
+      if (nickname && password) {
+        users[password] = nickname;
+      }
+    }
+  }
+  return users;
+}
+
+// 获取当前的密码-用户映射表，并做向下兼容
+function getUsers() {
+  const users = parseUsersAuth();
+  if (Object.keys(users).length === 0) {
+    const sysPassword = getSystemPassword();
+    if (sysPassword) {
+      users[sysPassword] = '管理员';
+    }
+  }
+  return users;
+}
+
+// 动态获取特定用户的物理文件路径
+function getUserPaths(nickname) {
+  if (!nickname || nickname === '访客') {
+    return {
+      configPath,
+      dataPath,
+      historyPath
+    };
+  }
+  // 安全过滤字符，防止目录穿越
+  const safeNickname = nickname.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_');
+  return {
+    configPath: path.join(dataDir, `config_${safeNickname}.json`),
+    dataPath: path.join(dataDir, `data_${safeNickname}.json`),
+    historyPath: path.join(dataDir, `history_${safeNickname}.json`)
+  };
+}
+
+// 获取或动态初始化用户专属文件
+function getOrInitUserFiles(nickname) {
+  const paths = getUserPaths(nickname);
+
+  // 1. 如果用户专属配置不存在，从全局 config.json 拷贝
+  if (!fs.existsSync(paths.configPath)) {
+    console.log(`[初始化] 正在为用户 "${nickname}" 复制默认配置文件...`);
+    let baseConfig;
+    if (fs.existsSync(configPath)) {
+      baseConfig = readJsonFile(configPath);
+    } else {
+      baseConfig = {
+        resetConfig: { dailyResetHour: 9, weeklyResetDay: 6, weeklyResetHour: 9 },
+        maxHistoryCount: 50,
+        roles: [],
+        assets: [],
+        dailies: [],
+        weeklies: []
+      };
+    }
+    saveJsonFile(paths.configPath, baseConfig);
+  }
+
+  // 2. 如果用户专属数据不存在，自动初始化角色状态
+  if (!fs.existsSync(paths.dataPath)) {
+    console.log(`[初始化] 正在为用户 "${nickname}" 创建初始进度数据文件...`);
+    const userConfig = readJsonFile(paths.configPath);
+    const baseData = {
+      lastDailyReset: new Date(0).toISOString(),
+      lastWeeklyReset: new Date(0).toISOString(),
+      globalMemo: [],
+      characters: {}
+    };
+    alignDataStructure(baseData, userConfig);
+    saveJsonFile(paths.dataPath, baseData);
+  }
+
+  return paths;
+}
+
+// 密码验证与多用户绑定中间件
 function authMiddleware(req, res, next) {
-  const sysPassword = getSystemPassword();
-  // 若未设置密码，直接放行
-  if (!sysPassword) {
+  const users = getUsers();
+  const hasPassword = Object.keys(users).length > 0;
+
+  // 若未设置密码，直接以访客身份放行
+  if (!hasPassword) {
+    req.nickname = '访客';
     return next();
   }
 
-  // 检测接口本身不拦截 (同时支持子路由匹配和完整Url匹配)
-  if (req.path === '/auth-check' || req.originalUrl === '/api/auth-check') {
+  // 检测接口本身不拦截
+  if (req.path === '/api/auth-check') {
     return next();
   }
 
   // 提取客户端提供的凭证
   const authHeader = req.headers['authorization'];
-  const clientPassword = (authHeader && authHeader.startsWith('Bearer '))
-    ? authHeader.substring(7)
-    : (req.headers['x-admin-password'] || '');
+  let clientPassword;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    clientPassword = authHeader.substring(7);
+  } else {
+    clientPassword = req.headers['x-admin-password'] || '';
+  }
 
-  if (clientPassword.trim() === sysPassword) {
+  const nickname = users[clientPassword];
+  if (nickname) {
+    req.nickname = nickname;
     return next();
   }
 
@@ -251,41 +349,52 @@ app.use('/api', authMiddleware);
 
 // 校验密码与系统安全状态接口
 app.get('/api/auth-check', (req, res) => {
-  const sysPassword = getSystemPassword();
-  const hasPassword = !!sysPassword;
+  const users = getUsers();
+  const hasPassword = Object.keys(users).length > 0;
+  const isMulti = !!process.env.USERS_AUTH;
 
   const authHeader = req.headers['authorization'];
-  const clientPassword = (authHeader && authHeader.startsWith('Bearer '))
-    ? authHeader.substring(7)
-    : (req.headers['x-admin-password'] || '');
+  let clientPassword;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    clientPassword = authHeader.substring(7);
+  } else {
+    clientPassword = req.headers['x-admin-password'] || '';
+  }
 
-  const isCorrect = !hasPassword || (clientPassword.trim() === sysPassword);
+  const nickname = users[clientPassword];
+  const isCorrect = !hasPassword || !!nickname;
 
   res.json({
     needPassword: hasPassword,
-    success: isCorrect
+    success: isCorrect,
+    nickname: nickname || (hasPassword ? '' : '访客'),
+    isMultiUser: isMulti
   });
 });
 
 // 统一状态获取接口（获取配置 + 最新数据，并执行重置校验）
 app.get('/api/status', (req, res) => {
+  const { configPath, dataPath, historyPath } = getOrInitUserFiles(req.nickname);
   const config = readJsonFile(configPath);
   const data = readJsonFile(dataPath);
 
   const now = new Date();
-  const resetTriggered = checkAndReset(data, config, now);
+  const resetTriggered = checkAndReset(data, config, now, historyPath);
   if (resetTriggered) {
     saveJsonFile(dataPath, data);
   }
 
   res.json({
     config,
-    data
+    data,
+    nickname: req.nickname,
+    isMultiUser: !!process.env.USERS_AUTH
   });
 });
 
 // 保存数据接口
 app.post('/api/save', (req, res) => {
+  const { configPath, dataPath, historyPath } = getOrInitUserFiles(req.nickname);
   const config = readJsonFile(configPath);
   const data = readJsonFile(dataPath);
 
@@ -299,7 +408,7 @@ app.post('/api/save', (req, res) => {
   }
 
   const now = new Date();
-  checkAndReset(data, config, now);
+  checkAndReset(data, config, now, historyPath);
 
   saveJsonFile(dataPath, data);
 
@@ -309,8 +418,9 @@ app.post('/api/save', (req, res) => {
   });
 });
 
-// 保存配置接口（并在保存后重新校准数据结构）
+// 保存配置接口（并在保存后重新校准数据 structure）
 app.post('/api/config', (req, res) => {
+  const { configPath, dataPath, historyPath } = getOrInitUserFiles(req.nickname);
   const newConfig = req.body;
   if (!newConfig || !newConfig.roles || !newConfig.weeklies) {
     return res.status(400).json({ error: '无效的配置格式' });
@@ -323,7 +433,7 @@ app.post('/api/config', (req, res) => {
   alignDataStructure(data, newConfig);
   
   const now = new Date();
-  checkAndReset(data, newConfig, now);
+  checkAndReset(data, newConfig, now, historyPath);
   saveJsonFile(dataPath, data);
 
   res.json({
@@ -335,6 +445,7 @@ app.post('/api/config', (req, res) => {
 
 // 手动强制重置接口
 app.post('/api/force-reset', (req, res) => {
+  const { configPath, dataPath, historyPath } = getOrInitUserFiles(req.nickname);
   const { type } = req.body; // 'daily' 或 'weekly'
   const config = readJsonFile(configPath);
   const data = readJsonFile(dataPath);
@@ -388,12 +499,14 @@ app.post('/api/force-reset', (req, res) => {
 
 // 获取历史记录接口
 app.get('/api/history', (req, res) => {
+  const { historyPath } = getOrInitUserFiles(req.nickname);
   const history = readJsonFile(historyPath, []);
   res.json(history);
 });
 
 // 清空所有历史归档接口
 app.post('/api/history/clear', (req, res) => {
+  const { historyPath } = getOrInitUserFiles(req.nickname);
   saveJsonFile(historyPath, []);
   res.json({ success: true });
 });

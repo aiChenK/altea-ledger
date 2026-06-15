@@ -116,7 +116,7 @@ export function alignDataStructure(data, config) {
 }
 
 // 核心检查与重置逻辑
-export function checkAndReset(data, config, now = new Date()) {
+export function checkAndReset(data, config, now = new Date(), historyPath = null) {
   let isChanged = alignDataStructure(data, config);
 
   const dailyResetHour = config.resetConfig.dailyResetHour;
@@ -149,11 +149,12 @@ export function checkAndReset(data, config, now = new Date()) {
     
     // 保存每周历史快照
     try {
-      const historyDir = path.join(__dirname, 'data');
-      const historyPath = path.join(historyDir, 'history.json');
+      const defaultHistoryDir = path.join(__dirname, 'data');
+      const targetHistoryPath = historyPath || path.join(defaultHistoryDir, 'history.json');
+      const targetHistoryDir = path.dirname(targetHistoryPath);
       let history = [];
-      if (fs.existsSync(historyPath)) {
-        history = JSON.parse(fs.readFileSync(historyPath, 'utf-8') || '[]');
+      if (fs.existsSync(targetHistoryPath)) {
+        history = JSON.parse(fs.readFileSync(targetHistoryPath, 'utf-8') || '[]');
       }
       const snapshot = {
         characters: JSON.parse(JSON.stringify(data.characters)),
@@ -168,10 +169,10 @@ export function checkAndReset(data, config, now = new Date()) {
       if (history.length > maxHistory) {
         history = history.slice(0, maxHistory);
       }
-      if (!fs.existsSync(historyDir)) {
-        fs.mkdirSync(historyDir, { recursive: true });
+      if (!fs.existsSync(targetHistoryDir)) {
+        fs.mkdirSync(targetHistoryDir, { recursive: true });
       }
-      fs.writeFileSync(historyPath, JSON.stringify(history, null, 2), 'utf-8');
+      fs.writeFileSync(targetHistoryPath, JSON.stringify(history, null, 2), 'utf-8');
       console.log(`[重置] 历史快照保存成功。当前历史条数: ${history.length}`);
     } catch (e) {
       console.error('[重置] 历史快照保存失败:', e);

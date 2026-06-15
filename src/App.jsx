@@ -10,6 +10,8 @@ function App() {
   const [needPassword, setNeedPassword] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [isMultiUser, setIsMultiUser] = useState(false);
 
   // 黄金鹅弹窗状态
   const [activeGooseRole, setActiveGooseRole] = useState(null);
@@ -116,6 +118,8 @@ function App() {
 
       const result = await res.json();
       localStorage.setItem('altea_ledger_password', loginPassword);
+      setNickname(result.nickname || '');
+      setIsMultiUser(!!result.isMultiUser);
       setConfig(result.config);
       setData(result.data);
       setDrawerConfig(JSON.parse(JSON.stringify(result.config)));
@@ -161,6 +165,8 @@ function App() {
       try {
         const res = await authFetch('/api/status');
         const result = await res.json();
+        setNickname(result.nickname || '');
+        setIsMultiUser(!!result.isMultiUser);
         setConfig(result.config);
         setData(result.data);
         setDrawerConfig(JSON.parse(JSON.stringify(result.config))); // 深拷贝供抽屉使用
@@ -372,6 +378,24 @@ function App() {
       console.error('清空历史归档失败:', err);
       showToast('操作失败，请检查后端服务', 'error');
     }
+  };
+
+  // 注销登录并回到验证锁屏
+  const handleLogout = () => {
+    triggerConfirm({
+      title: '🚪 退出登录',
+      message: '确定要退出当前账号并切换身份吗？',
+      confirmText: '确认退出',
+      onConfirm: () => {
+        localStorage.removeItem('altea_ledger_password');
+        setNickname('');
+        setIsMultiUser(false);
+        setConfig(null);
+        setData(null);
+        setNeedPassword(true);
+        showToast('已安全退出登录', 'success');
+      }
+    });
   };
 
   // 11. 配置抽屉的增删改查
@@ -602,6 +626,19 @@ function App() {
           <div className="brand-subtitle">每日 09:00 重置 · 每周六 09:00 重置 | 本地 JSON 安全存储</div>
         </div>
         <div className="header-actions">
+          {nickname && (
+            <div className="user-info">
+              <span className="user-avatar">👤</span>
+              <span className="user-name">{nickname}</span>
+              <button
+                className="btn-logout"
+                title="注销/切换账号"
+                onClick={handleLogout}
+              >
+                🚪
+              </button>
+            </div>
+          )}
           <button
             className="btn-icon"
             title="强制每日重置"
@@ -1238,16 +1275,24 @@ function App() {
             <div className="config-section">
               <h3>安全与访问密码设置</h3>
               <div className="input-label-group">
-                <label>系统访问密码（留空表示不需要密码验证）</label>
-                <input
-                  type="password"
-                  placeholder="留空表示免密直接访问"
-                  value={drawerConfig.adminPassword || ''}
-                  onChange={(e) => setDrawerConfig({
-                    ...drawerConfig,
-                    adminPassword: e.target.value
-                  })}
-                />
+                {isMultiUser ? (
+                  <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.45)', padding: '6px 0', lineHeight: '1.4' }}>
+                    👥 多用户模式下，访问密码由系统管理员在环境变量 <code>USERS_AUTH</code> 中统一配置，此处不支持自助修改。
+                  </div>
+                ) : (
+                  <>
+                    <label>系统访问密码（留空表示不需要密码验证）</label>
+                    <input
+                      type="password"
+                      placeholder="留空表示免密直接访问"
+                      value={drawerConfig.adminPassword || ''}
+                      onChange={(e) => setDrawerConfig({
+                        ...drawerConfig,
+                        adminPassword: e.target.value
+                      })}
+                    />
+                  </>
+                )}
               </div>
             </div>
 
