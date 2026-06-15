@@ -175,23 +175,24 @@
   padding: 0;
   height: 28px;
   background: rgba(255, 255, 255, 0.05) !important;
-  position: relative;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* 分割行首列样式：重用 .col-item-name 并做特殊处理以匹配分割行背景 */
+.row-divider td.col-item-name {
+  background: rgba(20, 22, 37, 0.98) !important;
+  padding-left: 10px;
+  text-align: left !important;
+}
+
 .row-divider-label {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
-  padding: 0;
   font-size: 0.8rem;
   font-weight: 700;
   color: #c084fc;
   letter-spacing: 0.05em;
   text-shadow: 0 0 6px rgba(192, 132, 252, 0.35);
+  white-space: nowrap;
 }
 
 /* 单元格的各类具体输入项 */
@@ -1160,4 +1161,71 @@
 .btn-logout:hover {
   opacity: 1;
   transform: scale(1.1);
+}
+
+/* ==========================================
+   移动端小屏设备样式优化 (宽度 < 600px)
+   ========================================== */
+@media (max-width: 600px) {
+  /* 调整整体容器边距，增加内容可用宽度 */
+  .app-container {
+    padding: 4px;
+    gap: 6px;
+  }
+
+  /* 头部区域改为上下两行布局，防止标题与按钮重合折叠 */
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .brand-section {
+    width: 100%;
+  }
+
+  .brand-section h1 {
+    font-size: 1.1rem;
+    white-space: nowrap;
+  }
+
+  /* 隐藏副标题以精简屏幕纵向空间 */
+  .brand-subtitle {
+    display: none;
+  }
+
+  /* 操作区域占满宽度并单独成行 */
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 6px;
+  }
+
+  /* 用户信息移动端对齐微调 */
+  .user-info {
+    margin-right: auto; /* 让用户信息居左，操作按钮居右，实现平衡对称 */
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
+
+  .user-name {
+    max-width: 70px;
+  }
+
+  /* 增大按钮尺寸以方便手指触控 */
+  .btn-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1.05rem;
+    border-radius: 8px;
+  }
+
+  /* 移动端数据面板紧凑微调 */
+  .tracker-panel {
+    padding: 4px;
+  }
 }

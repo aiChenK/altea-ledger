@@ -682,7 +682,7 @@ function App() {
       <header className="app-header glass-panel">
         <div className="brand-section">
           <h1>🐉 阿尔特里亚大陆考勤簿</h1>
-          <div className="brand-subtitle">每日 09:00 重置 · 每周六 09:00 重置 | 本地 JSON 安全存储</div>
+          <div className="brand-subtitle">角色周常与日常状态记录管理系统</div>
         </div>
         <div className="header-actions">
           {nickname && (
@@ -738,7 +738,7 @@ function App() {
             <table className="tracker-table">
               <thead>
                 <tr>
-                  <th className="col-item-name">项目 \ 角色</th>
+                  <th className="col-item-name">角色</th>
                   {config.roles.map(role => (
                     <th key={role} className="col-role-header">{role}</th>
                   ))}
@@ -793,9 +793,12 @@ function App() {
 
                 {/* 每日重置行分割 */}
                 <tr className="row-divider">
-                  <td colSpan={config.roles.length + 1}>
-                    <div className="row-divider-label">每日重置 (09:00)</div>
+                  <td className="col-item-name">
+                    <span className="row-divider-label">每日重置</span>
                   </td>
+                  {config.roles.map(role => (
+                    <td key={role}></td>
+                  ))}
                 </tr>
 
                 {/* 每日任务行 */}
@@ -856,9 +859,12 @@ function App() {
 
                 {/* 每周重置行分割 */}
                 <tr className="row-divider">
-                  <td colSpan={config.roles.length + 1}>
-                    <div className="row-divider-label">每周重置 (周六 09:00)</div>
+                  <td className="col-item-name">
+                    <span className="row-divider-label">每周重置</span>
                   </td>
+                  {config.roles.map(role => (
+                    <td key={role}></td>
+                  ))}
                 </tr>
 
                 {/* 每周关卡渲染 */}
@@ -1043,7 +1049,7 @@ function App() {
                 <table className="tracker-table">
                   <thead>
                     <tr>
-                      <th className="col-item-name">项目 \ 角色</th>
+                      <th className="col-item-name">角色</th>
                       {Object.keys(selectedHistoryItem.snapshot.characters).map(role => (
                         <th key={role} className="col-role-header">{role}</th>
                       ))}
@@ -1079,9 +1085,12 @@ function App() {
 
                     {/* 周常重置分割 */}
                     <tr className="row-divider">
-                      <td colSpan={Object.keys(selectedHistoryItem.snapshot.characters).length + 1}>
-                        <div className="row-divider-label">周常关卡状态（归档）</div>
+                      <td className="col-item-name">
+                        <span className="row-divider-label">周常关卡状态（归档）</span>
                       </td>
+                      {Object.keys(selectedHistoryItem.snapshot.characters).map(role => (
+                        <td key={role}></td>
+                      ))}
                     </tr>
 
                     {/* 周常关卡 */}
