@@ -66,7 +66,13 @@ export function alignDataStructure(data, config) {
     }
     for (const asset of config.assets) {
       if (char.assets[asset.key] === undefined) {
-        char.assets[asset.key] = asset.type === 'number' ? 0 : '';
+        if (asset.type === 'number') {
+          char.assets[asset.key] = 0;
+        } else if (asset.type === 'stage') {
+          char.assets[asset.key] = 0;
+        } else {
+          char.assets[asset.key] = '';
+        }
         modified = true;
       }
     }

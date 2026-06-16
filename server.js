@@ -29,29 +29,30 @@ const DEFAULT_CONFIG = {
   },
   maxHistoryCount: 50,
   roles: [
-    "风行",
-    "影舞",
-    "圣徒",
-    "冰灵",
-    "剑皇",
-    "药剂",
-    "灵魂"
+    "角色1",
+    "角色2",
+    "角色3",
+    "角色4"
   ],
+  showTodo: true,
   assets: [
     {
       key: "gold",
       name: "金币",
-      type: "number"
+      type: "number",
+      visible: true
     },
     {
       key: "fashion",
-      name: "时装",
-      type: "number"
+      name: "时装收集",
+      type: "number",
+      visible: true
     },
     {
       key: "goldenGoose",
       name: "黄金鹅",
-      type: "datetime"
+      type: "datetime",
+      visible: true
     }
   ],
   dailies: [
@@ -168,6 +169,10 @@ function readJsonFile(filePath, defaultContent = {}) {
     // 如果读取的是配置文件，我们需要进行完整性校验以避免属性缺失崩溃
     if (isConfig) {
       let needsFix = false;
+      if (parsed.showTodo === undefined) {
+        parsed.showTodo = true;
+        needsFix = true;
+      }
       if (!parsed.roles || !Array.isArray(parsed.roles)) {
         parsed.roles = [...DEFAULT_CONFIG.roles];
         needsFix = true;
@@ -421,7 +426,7 @@ app.post('/api/save', (req, res) => {
 // 保存配置接口（并在保存后重新校准数据 structure）
 app.post('/api/config', (req, res) => {
   const { configPath, dataPath, historyPath } = getOrInitUserFiles(req.nickname);
-  
+
   let newConfig = req.body;
   let renameMap = null;
 
@@ -477,7 +482,7 @@ app.post('/api/config', (req, res) => {
 
   // 用新配置进行结构校准
   alignDataStructure(data, newConfig);
-  
+
   const now = new Date();
   checkAndReset(data, newConfig, now, historyPath);
   saveJsonFile(dataPath, data);

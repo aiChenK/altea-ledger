@@ -11,21 +11,38 @@
     "角色2",
     "角色4"
   ],
+  "showTodo": true,
   "assets": [
     {
       "key": "gold",
       "name": "金币",
-      "type": "number"
+      "type": "number",
+      "visible": true
     },
     {
       "key": "fashion",
-      "name": "时装",
-      "type": "number"
+      "name": "时装收集",
+      "type": "number",
+      "visible": true
     },
     {
       "key": "goldenGoose",
       "name": "黄金鹅",
-      "type": "datetime"
+      "type": "datetime",
+      "visible": true
+    },
+    {
+      "key": "getegg",
+      "name": "领蛋",
+      "type": "stage",
+      "visible": true,
+      "maxStage": 1
+    },
+    {
+      "key": "panduola",
+      "name": "潘多拉券",
+      "type": "number",
+      "visible": true
     }
   ],
   "dailies": [

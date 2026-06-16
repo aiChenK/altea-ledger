@@ -13,9 +13,13 @@ function App() {
   const [nickname, setNickname] = useState('');
   const [isMultiUser, setIsMultiUser] = useState(false);
 
-  // 黄金鹅弹窗状态
-  const [activeGooseRole, setActiveGooseRole] = useState(null);
-  const [gooseDateInput, setGooseDateInput] = useState('');
+  // 通用时间类型资产弹窗状态
+  const [activeDatetimeModal, setActiveDatetimeModal] = useState(null); // { role, key, name }
+  const [datetimeInput, setDatetimeInput] = useState('');
+
+  // 自定义资产配置状态
+  const [newAssetInput, setNewAssetInput] = useState({ name: '', key: '', type: 'number', maxStage: 3 });
+  const [draggedAssetIndex, setDraggedAssetIndex] = useState(null);
 
   // 配置抽屉状态
   const [isConfigDrawerOpen, setIsConfigDrawerOpen] = useState(false);
@@ -377,43 +381,140 @@ function App() {
     saveToServer(updatedCharacters, data.globalMemo);
   };
 
-  // 8. 黄金鹅到期时间配置弹窗
-  const openGooseModal = (role) => {
-    setActiveGooseRole(role);
-    const currentVal = data.characters[role].assets.goldenGoose || '';
+  // 8. 通用时间类型资产到期时间配置弹窗
+  const openDatetimeModal = (role, asset) => {
+    setActiveDatetimeModal({ role, key: asset.key, name: asset.name });
+    const currentVal = data.characters[role].assets[asset.key] || '';
     if (currentVal) {
       const d = new Date(currentVal);
       const tzOffset = d.getTimezoneOffset() * 60000;
       const localISOTime = (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 16);
-      setGooseDateInput(localISOTime);
+      setDatetimeInput(localISOTime);
     } else {
-      setGooseDateInput('');
+      setDatetimeInput('');
     }
   };
 
-  const handleSaveGooseDate = () => {
-    if (!activeGooseRole) return;
+  const handleSaveDatetime = () => {
+    if (!activeDatetimeModal) return;
+    const { role, key } = activeDatetimeModal;
     const updated = { ...data.characters };
-    updated[activeGooseRole].assets.goldenGoose = gooseDateInput ? new Date(gooseDateInput).toISOString() : '';
+    updated[role].assets[key] = datetimeInput ? new Date(datetimeInput).toISOString() : '';
     setData({ ...data, characters: updated });
     saveToServer(updated, data.globalMemo);
-    setActiveGooseRole(null);
+    setActiveDatetimeModal(null);
   };
 
-  const handleQuickAddGooseDays = (days) => {
+  const handleQuickAddDatetimeDays = (days) => {
     const baseDate = new Date();
     baseDate.setDate(baseDate.getDate() + days);
     const tzOffset = baseDate.getTimezoneOffset() * 60000;
     const localISOTime = (new Date(baseDate.getTime() - tzOffset)).toISOString().slice(0, 16);
-    setGooseDateInput(localISOTime);
+    setDatetimeInput(localISOTime);
   };
 
-  const handleClearGoose = (role) => {
+  const handleClearDatetime = () => {
+    if (!activeDatetimeModal) return;
+    const { role, key } = activeDatetimeModal;
     const updated = { ...data.characters };
-    updated[role].assets.goldenGoose = '';
+    updated[role].assets[key] = '';
     setData({ ...data, characters: updated });
     saveToServer(updated, data.globalMemo);
-    setActiveGooseRole(null);
+    setActiveDatetimeModal(null);
+  };
+
+  // 8.5 资产阶段切换（0 -> 1 -> ... -> maxStage -> 0）
+  const handleAssetStageChange = (role, key, maxStage) => {
+    const updated = { ...data.characters };
+    let current = updated[role].assets[key] || 0;
+    current = (current + 1) % (maxStage + 1);
+    updated[role].assets[key] = current;
+    setData({ ...data, characters: updated });
+    saveToServer(updated, data.globalMemo);
+  };
+
+  // 8.6 自定义资产管理操作
+  const handleRenameAsset = (key, newName) => {
+    const updatedAssets = drawerConfig.assets.map(a => {
+      if (a.key === key) {
+        return { ...a, name: newName };
+      }
+      return a;
+    });
+    setDrawerConfig({ ...drawerConfig, assets: updatedAssets });
+  };
+
+  const handleRemoveAsset = (key) => {
+    if (['gold', 'fashion', 'goldenGoose'].includes(key)) return;
+    const updatedAssets = drawerConfig.assets.filter(a => a.key !== key);
+    setDrawerConfig({ ...drawerConfig, assets: updatedAssets });
+  };
+
+  const handleAddAsset = () => {
+    if (!newAssetInput.name.trim() || !newAssetInput.key.trim()) {
+      showToast('项目名称和英文Key不能为空', 'warning');
+      return;
+    }
+    const key = newAssetInput.key.trim().toLowerCase();
+    if (!/^[a-z][a-z0-9_]*$/.test(key)) {
+      showToast('英文Key格式不正确（必须以小写字母开头，且仅包含小写字母、数字或下划线）', 'warning');
+      return;
+    }
+    if (['gold', 'fashion', 'goldenGoose', 'todos', 'dailies', 'weeklies'].includes(key)) {
+      showToast('该英文Key是保留关键字，不能使用', 'warning');
+      return;
+    }
+    if (drawerConfig.assets.some(a => a.key === key)) {
+      showToast('已存在相同英文Key的项目', 'warning');
+      return;
+    }
+
+    const newAsset = {
+      key,
+      name: newAssetInput.name.trim(),
+      type: newAssetInput.type,
+      visible: true
+    };
+
+    if (newAssetInput.type === 'stage') {
+      newAsset.maxStage = Math.max(1, Math.min(10, Number(newAssetInput.maxStage) || 3));
+    }
+
+    const updatedAssets = [...drawerConfig.assets, newAsset];
+    setDrawerConfig({ ...drawerConfig, assets: updatedAssets });
+    setNewAssetInput({
+      name: '',
+      key: '',
+      type: 'number',
+      maxStage: 3
+    });
+    showToast('自定义项目添加成功', 'success');
+  };
+
+  const handleAssetDragStart = (e, index) => {
+    setDraggedAssetIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index);
+  };
+
+  const handleAssetDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedAssetIndex === null || draggedAssetIndex === index) return;
+
+    const updatedAssets = [...drawerConfig.assets];
+    const draggedItem = updatedAssets[draggedAssetIndex];
+    updatedAssets.splice(draggedAssetIndex, 1);
+    updatedAssets.splice(index, 0, draggedItem);
+
+    setDraggedAssetIndex(index);
+    setDrawerConfig({
+      ...drawerConfig,
+      assets: updatedAssets
+    });
+  };
+
+  const handleAssetDragEnd = () => {
+    setDraggedAssetIndex(null);
   };
 
   // 9. 手动强制重置
@@ -491,6 +592,7 @@ function App() {
       showToast('该角色已存在', 'warning');
       return;
     }
+    // eslint-disable-next-line react-hooks/purity
     const newId = `new_role_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     setRolesWithId([...rolesWithId, { id: newId, name: trimmed }]);
     setNewRoleInput('');
@@ -625,9 +727,9 @@ function App() {
     setDraggedWeeklyIndex(null);
   };
 
-  // 渲染辅助函数：黄金鹅 Buff 状态文本
-  const renderGoldenGoose = (role) => {
-    const gooseVal = data.characters[role].assets.goldenGoose;
+  // 渲染辅助函数：时间类型资产 Buff 状态文本
+  const renderDatetimeAsset = (role, assetKey) => {
+    const gooseVal = data.characters[role]?.assets?.[assetKey];
     if (!gooseVal) return <span style={{ opacity: 0.4 }}>未启用</span>;
 
     const expiration = new Date(gooseVal);
@@ -647,9 +749,9 @@ function App() {
     return <span>剩 {diffHours}小时</span>;
   };
 
-  // 渲染辅助：获取黄金鹅到期样式类
-  const getGooseCellClass = (role) => {
-    const gooseVal = data.characters[role].assets.goldenGoose;
+  // 渲染辅助：获取时间到期样式类
+  const getDatetimeCellClass = (role, assetKey) => {
+    const gooseVal = data.characters[role]?.assets?.[assetKey];
     if (!gooseVal) return '';
     const expiration = new Date(gooseVal);
     const now = new Date();
@@ -818,16 +920,66 @@ function App() {
               </thead>
               <tbody>
 
-                {/* 角色资产渲染 (金币、时装) */}
-                {config.assets.map(asset => {
+                {/* 角色资产及自定义项目渲染 */}
+                {config.assets.filter(asset => asset.visible !== false).map(asset => {
                   if (asset.type === 'datetime') {
-                    return null;
+                    return (
+                      <tr key={asset.key}>
+                        <td className="col-item-name">{asset.name}</td>
+                        {config.roles.map(role => (
+                          <td key={role}>
+                            <div
+                              className={`goose-cell ${getDatetimeCellClass(role, asset.key)}`}
+                              onClick={() => openDatetimeModal(role, asset)}
+                            >
+                              {renderDatetimeAsset(role, asset.key)}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+                    );
                   }
+                  if (asset.type === 'stage') {
+                    const maxStage = asset.maxStage || 3;
+                    return (
+                      <tr key={asset.key}>
+                        <td className="col-item-name">{asset.name}</td>
+                        {config.roles.map(role => {
+                          const stage = data.characters[role]?.assets?.[asset.key] || 0;
+                          const isComplete = stage === maxStage;
+                          return (
+                            <td key={role}>
+                              <div
+                                className="stage-cell"
+                                onClick={() => handleAssetStageChange(role, asset.key, maxStage)}
+                              >
+                                <div className="stage-dots">
+                                  {Array.from({ length: maxStage }).map((_, idx) => {
+                                    const dotIndex = idx + 1;
+                                    return (
+                                      <div
+                                        key={dotIndex}
+                                        className={`stage-dot ${stage >= dotIndex ? (isComplete ? 'all-filled' : 'filled') : ''}`}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                                <span className={`stage-label ${isComplete ? 'completed' : ''}`}>
+                                  {stage}/{maxStage}
+                                </span>
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  }
+                  // 默认 number 类型
                   return (
                     <tr key={asset.key}>
                       <td className="col-item-name">{asset.name}</td>
                       {config.roles.map(role => {
-                        const val = data.characters[role]?.assets[asset.key] || 0;
+                        const val = data.characters[role]?.assets?.[asset.key] || 0;
                         return (
                           <td key={role}>
                             <div className="asset-input-wrapper">
@@ -846,61 +998,46 @@ function App() {
                   );
                 })}
 
-                {/* 黄金鹅 Buff 状态 */}
-                <tr>
-                  <td className="col-item-name">黄金鹅</td>
-                  {config.roles.map(role => {
-                    return (
-                      <td key={role}>
-                        <div
-                          className={`goose-cell ${getGooseCellClass(role)}`}
-                          onClick={() => openGooseModal(role)}
-                        >
-                          {renderGoldenGoose(role)}
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
-
                 {/* 角色代办 */}
-                <tr>
-                  <td className="col-item-name">角色代办</td>
-                  {config.roles.map(role => {
-                    const todos = data.characters[role]?.todos || [];
-                    const inputVal = todoInputs[role] || '';
-                    return (
-                      <td key={role}>
-                        <div className="todo-cell">
-                          {todos.length > 0 && (
-                            <div className="todo-tags-list">
-                              {todos.map((todo, idx) => (
-                                <div className="todo-tag" key={idx}>
-                                  <span>{todo}</span>
-                                  <button
-                                    type="button"
-                                    className="btn-remove-todo-tag"
-                                    onClick={() => handleRemoveTodo(role, todo)}
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <input
-                            type="text"
-                            className="todo-input"
-                            placeholder="新代办..."
-                            value={inputVal}
-                            onChange={(e) => setTodoInputs({ ...todoInputs, [role]: e.target.value })}
-                            onKeyDown={(e) => handleAddTodo(role, e)}
-                          />
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
+                {config.showTodo !== false && (
+                  <tr>
+                    <td className="col-item-name">角色代办</td>
+                    {config.roles.map(role => {
+                      const todos = data.characters[role]?.todos || [];
+                      const inputVal = todoInputs[role] || '';
+                      return (
+                        <td key={role}>
+                          <div className="todo-cell">
+                            {todos.length > 0 && (
+                              <div className="todo-tags-list">
+                                {todos.map((todo, idx) => (
+                                  <div className="todo-tag" key={idx}>
+                                    <span>{todo}</span>
+                                    <button
+                                      type="button"
+                                      className="btn-remove-todo-tag"
+                                      onClick={() => handleRemoveTodo(role, todo)}
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <input
+                              type="text"
+                              className="todo-input"
+                              placeholder="新代办..."
+                              value={inputVal}
+                              onChange={(e) => setTodoInputs({ ...todoInputs, [role]: e.target.value })}
+                              onKeyDown={(e) => handleAddTodo(role, e)}
+                            />
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                )}
 
                 {/* 每日重置行分割 */}
                 <tr className="row-divider">
@@ -1068,32 +1205,32 @@ function App() {
         </aside>
       </main>
 
-      {/* 黄金鹅 Buff 设置弹窗 */}
-      {activeGooseRole && (
+      {/* 通用时间类型资产设置弹窗 */}
+      {activeDatetimeModal && (
         <div className="modal-backdrop">
           <div className="modal-content glass-panel">
             <div className="modal-header">
-              <h3>🦢 配置 【{activeGooseRole}】 的黄金鹅 Buff</h3>
-              <button style={{ fontSize: '1.2rem' }} onClick={() => setActiveGooseRole(null)}>×</button>
+              <h3>🦢 配置 【{activeDatetimeModal.role}】 的 {activeDatetimeModal.name}</h3>
+              <button style={{ fontSize: '1.2rem' }} onClick={() => setActiveDatetimeModal(null)}>×</button>
             </div>
 
             <div className="input-label-group">
               <label>手动选择到期日期 和 时间：</label>
               <input
                 type="datetime-local"
-                value={gooseDateInput}
-                onChange={(e) => setGooseDateInput(e.target.value)}
+                value={datetimeInput}
+                onChange={(e) => setDatetimeInput(e.target.value)}
               />
             </div>
 
             <div className="quick-days-btns">
-              <button className="btn-quick-day" onClick={() => handleQuickAddGooseDays(7)}>+7 天</button>
+              <button className="btn-quick-day" onClick={() => handleQuickAddDatetimeDays(7)}>+7 天</button>
             </div>
 
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setActiveGooseRole(null)}>取消</button>
-              <button className="btn-danger" onClick={() => handleClearGoose(activeGooseRole)}>清除 Buff</button>
-              <button className="btn-success btn-primary" onClick={handleSaveGooseDate}>保存</button>
+              <button className="btn-secondary" onClick={() => setActiveDatetimeModal(null)}>取消</button>
+              <button className="btn-danger" onClick={handleClearDatetime}>清除</button>
+              <button className="btn-success btn-primary" onClick={handleSaveDatetime}>保存</button>
             </div>
           </div>
         </div>
@@ -1170,57 +1307,97 @@ function App() {
                   </thead>
                   <tbody>
 
-                    {/* 资产 */}
-                    {config.assets.filter(a => a.type !== 'datetime').map(asset => (
-                      <tr key={asset.key}>
-                        <td className="col-item-name">{asset.name}</td>
-                        {Object.keys(selectedHistoryItem.snapshot.characters).map(role => {
-                          const char = selectedHistoryItem.snapshot.characters[role];
-                          const val = char?.assets?.[asset.key] || 0;
-                          return <td key={role} style={{ fontWeight: '600' }}>{val}</td>;
-                        })}
-                      </tr>
-                    ))}
-
-                    {/* 黄金鹅 */}
-                    <tr>
-                      <td className="col-item-name">黄金鹅</td>
-                      {Object.keys(selectedHistoryItem.snapshot.characters).map(role => {
-                        const char = selectedHistoryItem.snapshot.characters[role];
-                        const val = char?.assets?.goldenGoose;
+                    {/* 角色资产及自定义项目（只读历史） */}
+                    {config.assets.filter(asset => asset.visible !== false).map(asset => {
+                      if (asset.type === 'datetime') {
                         return (
-                          <td key={role} style={{ fontSize: '0.75rem', opacity: val ? 1 : 0.4 }}>
-                            {val ? new Date(val).toLocaleDateString('zh-CN') : '未启用'}
-                          </td>
+                          <tr key={asset.key}>
+                            <td className="col-item-name">{asset.name}</td>
+                            {Object.keys(selectedHistoryItem.snapshot.characters).map(role => {
+                              const char = selectedHistoryItem.snapshot.characters[role];
+                              const val = char?.assets?.[asset.key];
+                              return (
+                                <td key={role} style={{ fontSize: '0.75rem', opacity: val ? 1 : 0.4 }}>
+                                  {val ? new Date(val).toLocaleDateString('zh-CN') : '未启用'}
+                                </td>
+                              );
+                            })}
+                          </tr>
                         );
-                      })}
-                    </tr>
+                      }
+                      if (asset.type === 'stage') {
+                        const maxStage = asset.maxStage || 3;
+                        return (
+                          <tr key={asset.key}>
+                            <td className="col-item-name">{asset.name}</td>
+                            {Object.keys(selectedHistoryItem.snapshot.characters).map(role => {
+                              const char = selectedHistoryItem.snapshot.characters[role];
+                              const stage = char?.assets?.[asset.key] || 0;
+                              const isComplete = stage === maxStage;
+                              return (
+                                <td key={role}>
+                                  <div className="stage-cell" style={{ cursor: 'default' }}>
+                                    <div className="stage-dots">
+                                      {Array.from({ length: maxStage }).map((_, idx) => {
+                                        const dotIndex = idx + 1;
+                                        return (
+                                          <div
+                                            key={dotIndex}
+                                            className={`stage-dot ${stage >= dotIndex ? (isComplete ? 'all-filled' : 'filled') : ''}`}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                    <span className={`stage-label ${isComplete ? 'completed' : ''}`}>
+                                      {stage}/{maxStage}
+                                    </span>
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      }
+                      // 默认 number 类型
+                      return (
+                        <tr key={asset.key}>
+                          <td className="col-item-name">{asset.name}</td>
+                          {Object.keys(selectedHistoryItem.snapshot.characters).map(role => {
+                            const char = selectedHistoryItem.snapshot.characters[role];
+                            const val = char?.assets?.[asset.key] || 0;
+                            return <td key={role} style={{ fontWeight: '600' }}>{val}</td>;
+                          })}
+                        </tr>
+                      );
+                    })}
 
                     {/* 角色代办（只读历史） */}
-                    <tr>
-                      <td className="col-item-name">角色代办</td>
-                      {Object.keys(selectedHistoryItem.snapshot.characters).map(role => {
-                        const char = selectedHistoryItem.snapshot.characters[role];
-                        const todos = char?.todos || [];
-                        return (
-                          <td key={role}>
-                            {todos.length === 0 ? (
-                              <span style={{ opacity: 0.3, fontSize: '0.7rem' }}>—</span>
-                            ) : (
-                              <div className="todo-cell" style={{ cursor: 'default', minHeight: 'auto' }}>
-                                <div className="todo-tags-list">
-                                  {todos.map((todo, idx) => (
-                                    <div className="todo-tag" key={idx} style={{ cursor: 'default' }}>
-                                      <span>{todo}</span>
-                                    </div>
-                                  ))}
+                    {config.showTodo !== false && (
+                      <tr>
+                        <td className="col-item-name">角色代办</td>
+                        {Object.keys(selectedHistoryItem.snapshot.characters).map(role => {
+                          const char = selectedHistoryItem.snapshot.characters[role];
+                          const todos = char?.todos || [];
+                          return (
+                            <td key={role}>
+                              {todos.length === 0 ? (
+                                <span style={{ opacity: 0.3, fontSize: '0.7rem' }}>—</span>
+                              ) : (
+                                <div className="todo-cell" style={{ cursor: 'default', minHeight: 'auto' }}>
+                                  <div className="todo-tags-list">
+                                    {todos.map((todo, idx) => (
+                                      <div className="todo-tag" key={idx} style={{ cursor: 'default' }}>
+                                        <span>{todo}</span>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    )}
 
                     {/* 周常重置分割 */}
                     <tr className="row-divider">
@@ -1360,6 +1537,131 @@ function App() {
                     onChange={(e) => setNewRoleInput(e.target.value)}
                   />
                   <button className="btn-primary" style={{ padding: '6px 14px' }} onClick={handleAddRole}>新增</button>
+                </div>
+              </div>
+
+              {/* 展示与自定义项目管理 */}
+              <div className="config-section">
+                <h3>展示与自定义项目</h3>
+                
+                {/* 默认开关部分 */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', padding: '6px 0', borderBottom: '1px dashed rgba(255,255,255,0.06)', marginBottom: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={drawerConfig.showTodo !== false}
+                      onChange={(e) => setDrawerConfig({ ...drawerConfig, showTodo: e.target.checked })}
+                    />
+                    显示角色待办
+                  </label>
+                </div>
+
+                {/* 资产/项目列表（支持可见控制、改名、拖拽排序） */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '250px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {drawerConfig.assets.map((asset, index) => {
+                    const isDragging = index === draggedAssetIndex;
+                    const isDefault = ['gold', 'fashion', 'goldenGoose'].includes(asset.key);
+                    
+                    let typeLabel = '数字';
+                    if (asset.type === 'datetime') typeLabel = '时间';
+                    if (asset.type === 'stage') typeLabel = `进度 (${asset.maxStage}阶)`;
+
+                    return (
+                      <div
+                        className={`config-list-item ${isDragging ? 'dragging' : ''}`}
+                        key={asset.key}
+                        draggable
+                        onDragStart={(e) => handleAssetDragStart(e, index)}
+                        onDragOver={(e) => handleAssetDragOver(e, index)}
+                        onDragEnd={handleAssetDragEnd}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                          <span className="drag-handle" title="拖动排序">⋮⋮</span>
+                          <input
+                            type="checkbox"
+                            checked={asset.visible !== false}
+                            onChange={(e) => {
+                              const updatedAssets = drawerConfig.assets.map(a => 
+                                a.key === asset.key ? { ...a, visible: e.target.checked } : a
+                              );
+                              setDrawerConfig({ ...drawerConfig, assets: updatedAssets });
+                            }}
+                          />
+                          <input
+                            type="text"
+                            className="role-edit-input"
+                            style={{ flex: 1 }}
+                            value={asset.name}
+                            onChange={(e) => handleRenameAsset(asset.key, e.target.value)}
+                            draggable={false}
+                            onDragStart={(e) => e.preventDefault()}
+                          />
+                          <span style={{ fontSize: '0.75rem', opacity: 0.45, whiteSpace: 'nowrap' }}>
+                            ({typeLabel})
+                          </span>
+                        </div>
+                        <div className="config-list-item-actions" onDragStart={(e) => e.preventDefault()} draggable={false}>
+                          {!isDefault && (
+                            <button className="btn-delete-item" onClick={() => handleRemoveAsset(asset.key)}>删除</button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 添加自定义项目表单 */}
+                <div className="add-input-group" style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <input
+                      type="text"
+                      placeholder="项目名称 (如: 特殊积分)"
+                      value={newAssetInput.name}
+                      onChange={(e) => setNewAssetInput({ ...newAssetInput, name: e.target.value })}
+                      style={{ width: '40%' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="英文Key (如: score)"
+                      value={newAssetInput.key}
+                      onChange={(e) => setNewAssetInput({ ...newAssetInput, key: e.target.value })}
+                      style={{ width: '35%' }}
+                    />
+                    <select
+                      value={newAssetInput.type}
+                      onChange={(e) => setNewAssetInput({ ...newAssetInput, type: e.target.value })}
+                      style={{
+                        width: '25%',
+                        background: 'rgba(0,0,0,0.3)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '6px',
+                        color: '#fff',
+                        padding: '4px'
+                      }}
+                    >
+                      <option value="number">数字</option>
+                      <option value="datetime">时间</option>
+                      <option value="stage">进度</option>
+                    </select>
+                  </div>
+                  
+                  {newAssetInput.type === 'stage' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', opacity: 0.8 }}>
+                      <span>阶段数 (1-10)：</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={newAssetInput.maxStage}
+                        onChange={(e) => setNewAssetInput({ ...newAssetInput, maxStage: Number(e.target.value) || 3 })}
+                        style={{ width: '60px', padding: '2px 4px' }}
+                      />
+                    </div>
+                  )}
+
+                  <button className="btn-primary" style={{ width: '100%', padding: '6px' }} onClick={handleAddAsset}>
+                    添加项目
+                  </button>
                 </div>
               </div>
 
