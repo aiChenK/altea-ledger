@@ -95,6 +95,12 @@ export function alignDataStructure(data, config) {
       }
     }
 
+    // 校准 todos
+    if (!char.todos) {
+      char.todos = [];
+      modified = true;
+    }
+
     // 清理不存在于配置中的任务/关卡/资产
     const assetKeys = new Set(config.assets.map(a => a.key));
     for (const k of Object.keys(char.assets)) {

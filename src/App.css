@@ -1254,3 +1254,94 @@
     padding: 4px;
   }
 }
+
+/* ==========================================
+   角色代办（Todo）样式定义
+   ========================================== */
+.todo-cell {
+  padding: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  min-height: 26px;
+  justify-content: center;
+  text-align: left;
+  min-width: 70px;
+  max-width: 82px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.todo-tags-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 120px;
+  overflow-y: auto;
+  scrollbar-width: none; /* 隐藏默认滚动条 */
+}
+
+.todo-tags-list::-webkit-scrollbar {
+  display: none; /* 隐藏 Webkit 滚动条 */
+}
+
+.todo-tag {
+  background: rgba(192, 132, 252, 0.1);
+  border: 1px solid rgba(192, 132, 252, 0.25);
+  padding: 1px 4px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  font-size: 0.7rem;
+  color: #f3e8ff;
+  word-break: break-all;
+  line-height: 1.2;
+}
+
+.todo-tag:hover {
+  border-color: rgba(192, 132, 252, 0.45);
+  background: rgba(192, 132, 252, 0.15);
+}
+
+.btn-remove-todo-tag {
+  color: rgba(192, 132, 252, 0.5);
+  font-size: 0.65rem;
+  font-weight: bold;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.1s ease;
+}
+
+.btn-remove-todo-tag:hover {
+  color: #ef4444;
+}
+
+.todo-input {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: #fff;
+  padding: 2px 4px !important;
+  font-size: 0.7rem;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 3px;
+  outline: none !important;
+  height: 20px !important;
+  box-shadow: none !important;
+}
+
+.todo-input:focus {
+  border-color: rgba(192, 132, 252, 0.45) !important;
+  background: rgba(0, 0, 0, 0.35) !important;
+}

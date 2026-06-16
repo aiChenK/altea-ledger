@@ -38,6 +38,9 @@ function App() {
   // 备忘录保存状态
   const [memoStatus, setMemoStatus] = useState('已保存');
 
+  // 角色代办输入绑定
+  const [todoInputs, setTodoInputs] = useState({});
+
   // 防抖 Ref
   const saveDebounceRef = useRef(null);
 
@@ -329,6 +332,49 @@ function App() {
     const updatedMemo = currentMemo.filter(t => t !== tagToRemove);
     setData({ ...data, globalMemo: updatedMemo });
     saveToServer(data.characters, updatedMemo);
+  };
+
+  // 7.5 角色代办添加（回车触发）
+  const handleAddTodo = (role, e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const val = (todoInputs[role] || '').trim();
+      if (val) {
+        const charData = data.characters[role];
+        const currentTodos = Array.isArray(charData.todos) ? [...charData.todos] : [];
+        if (!currentTodos.includes(val)) {
+          const updatedTodos = [...currentTodos, val];
+          const updatedCharacters = {
+            ...data.characters,
+            [role]: {
+              ...charData,
+              todos: updatedTodos
+            }
+          };
+          setData({ ...data, characters: updatedCharacters });
+          setTodoInputs({ ...todoInputs, [role]: '' });
+          saveToServer(updatedCharacters, data.globalMemo);
+        } else {
+          showToast('该代办已存在', 'warning');
+        }
+      }
+    }
+  };
+
+  // 7.6 角色代办删除
+  const handleRemoveTodo = (role, tagToRemove) => {
+    const charData = data.characters[role];
+    const currentTodos = Array.isArray(charData.todos) ? charData.todos : [];
+    const updatedTodos = currentTodos.filter(t => t !== tagToRemove);
+    const updatedCharacters = {
+      ...data.characters,
+      [role]: {
+        ...charData,
+        todos: updatedTodos
+      }
+    };
+    setData({ ...data, characters: updatedCharacters });
+    saveToServer(updatedCharacters, data.globalMemo);
   };
 
   // 8. 黄金鹅到期时间配置弹窗
@@ -817,6 +863,45 @@ function App() {
                   })}
                 </tr>
 
+                {/* 角色代办 */}
+                <tr>
+                  <td className="col-item-name">角色代办</td>
+                  {config.roles.map(role => {
+                    const todos = data.characters[role]?.todos || [];
+                    const inputVal = todoInputs[role] || '';
+                    return (
+                      <td key={role}>
+                        <div className="todo-cell">
+                          {todos.length > 0 && (
+                            <div className="todo-tags-list">
+                              {todos.map((todo, idx) => (
+                                <div className="todo-tag" key={idx}>
+                                  <span>{todo}</span>
+                                  <button
+                                    type="button"
+                                    className="btn-remove-todo-tag"
+                                    onClick={() => handleRemoveTodo(role, todo)}
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <input
+                            type="text"
+                            className="todo-input"
+                            placeholder="新代办..."
+                            value={inputVal}
+                            onChange={(e) => setTodoInputs({ ...todoInputs, [role]: e.target.value })}
+                            onKeyDown={(e) => handleAddTodo(role, e)}
+                          />
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+
                 {/* 每日重置行分割 */}
                 <tr className="row-divider">
                   <td className="col-item-name">
@@ -1106,6 +1191,32 @@ function App() {
                         return (
                           <td key={role} style={{ fontSize: '0.75rem', opacity: val ? 1 : 0.4 }}>
                             {val ? new Date(val).toLocaleDateString('zh-CN') : '未启用'}
+                          </td>
+                        );
+                      })}
+                    </tr>
+
+                    {/* 角色代办（只读历史） */}
+                    <tr>
+                      <td className="col-item-name">角色代办</td>
+                      {Object.keys(selectedHistoryItem.snapshot.characters).map(role => {
+                        const char = selectedHistoryItem.snapshot.characters[role];
+                        const todos = char?.todos || [];
+                        return (
+                          <td key={role}>
+                            {todos.length === 0 ? (
+                              <span style={{ opacity: 0.3, fontSize: '0.7rem' }}>—</span>
+                            ) : (
+                              <div className="todo-cell" style={{ cursor: 'default', minHeight: 'auto' }}>
+                                <div className="todo-tags-list">
+                                  {todos.map((todo, idx) => (
+                                    <div className="todo-tag" key={idx} style={{ cursor: 'default' }}>
+                                      <span>{todo}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </td>
                         );
                       })}
