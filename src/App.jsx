@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 
 function App() {
@@ -72,7 +72,7 @@ function App() {
   };
 
   // 封装统一授权请求方法
-  const authFetch = async (url, options = {}) => {
+  const authFetch = useCallback(async (url, options = {}) => {
     const password = localStorage.getItem('altea_ledger_password') || '';
     const headers = {
       ...options.headers,
@@ -87,7 +87,36 @@ function App() {
       throw new Error('UNAUTHORIZED');
     }
     return res;
-  };
+  }, []);
+
+  // 统一从服务端获取最新配置与状态
+  const fetchStatus = useCallback(async (isBackground = false) => {
+    // 智能避让：如果处于后台刷新且用户正在输入（防抖定时器激活），则跳过本次刷新，防止覆盖用户输入
+    if (isBackground && saveDebounceRef.current) {
+      console.log('[自动刷新] 检测到用户正在输入中，已避让跳过本次自动刷新');
+      return;
+    }
+    try {
+      const res = await authFetch('/api/status');
+      const result = await res.json();
+      setNickname(result.nickname || '');
+      setIsMultiUser(!!result.isMultiUser);
+      setConfig(result.config);
+      setData(result.data);
+      setDrawerConfig(JSON.parse(JSON.stringify(result.config))); // 深拷贝供抽屉使用
+      if (!isBackground) {
+        setLoading(false);
+      }
+    } catch (err) {
+      if (err.message === 'UNAUTHORIZED') {
+        if (!isBackground) {
+          setLoading(false);
+        }
+      } else {
+        console.error('获取服务端数据失败...', err);
+      }
+    }
+  }, [authFetch]);
 
   // 处理登录密码校验提交
   const handleLoginSubmit = async (e) => {
@@ -163,26 +192,23 @@ function App() {
   };
 
   useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const res = await authFetch('/api/status');
-        const result = await res.json();
-        setNickname(result.nickname || '');
-        setIsMultiUser(!!result.isMultiUser);
-        setConfig(result.config);
-        setData(result.data);
-        setDrawerConfig(JSON.parse(JSON.stringify(result.config))); // 深拷贝供抽屉使用
-        setLoading(false);
-      } catch (err) {
-        if (err.message === 'UNAUTHORIZED') {
-          setLoading(false);
-        } else {
-          console.error('获取服务端数据失败，正在尝试重试...', err);
-        }
-      }
-    };
-    fetchStatus();
-  }, []);
+    // 首次载入拉取数据 (异步自执行避免 eslint 的同步 setState 警告)
+    (async () => {
+      await fetchStatus();
+    })();
+
+    // 如果处于等待输入密码状态，则不启动定时刷新
+    if (needPassword) {
+      return;
+    }
+
+    // 设置默认 10 分钟自动刷新
+    const intervalId = setInterval(() => {
+      fetchStatus(true);
+    }, 10 * 60 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [needPassword, fetchStatus]);
 
   const handleOpenHistory = () => {
     setIsHistoryDrawerOpen(true);
