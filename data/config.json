@@ -30,19 +30,6 @@
       "name": "黄金鹅",
       "type": "datetime",
       "visible": true
-    },
-    {
-      "key": "getegg",
-      "name": "领蛋",
-      "type": "stage",
-      "visible": true,
-      "maxStage": 1
-    },
-    {
-      "key": "panduola",
-      "name": "潘多拉券",
-      "type": "number",
-      "visible": true
     }
   ],
   "dailies": [
@@ -74,11 +61,6 @@
     }
   ],
   "weeklies": [
-    {
-      "key": "warehouse",
-      "name": "仓库",
-      "baseCount": 1
-    },
     {
       "key": "expedition70",
       "name": "远征70",
