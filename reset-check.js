@@ -134,7 +134,7 @@ export function alignDataStructure(data, config) {
 }
 
 // 核心检查与重置逻辑
-export function checkAndReset(data, config, now = new Date(), historyPath = null) {
+export function checkAndReset(data, config, now = new Date(), historyPath = null, onWeeklyReset = null) {
   let isChanged = alignDataStructure(data, config);
 
   const dailyResetHour = config.resetConfig.dailyResetHour;
@@ -192,6 +192,15 @@ export function checkAndReset(data, config, now = new Date(), historyPath = null
       }
       fs.writeFileSync(targetHistoryPath, JSON.stringify(history, null, 2), 'utf-8');
       console.log(`[重置] 历史快照保存成功。当前历史条数: ${history.length}`);
+      
+      // 触发每周重置回调，例如发送邮件备份
+      if (onWeeklyReset && typeof onWeeklyReset === 'function') {
+        try {
+          onWeeklyReset();
+        } catch (callbackErr) {
+          console.error('[重置] 每周重置回调执行失败:', callbackErr);
+        }
+      }
     } catch (e) {
       console.error('[重置] 历史快照保存失败:', e);
     }

@@ -4,6 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { checkAndReset, alignDataStructure } from './reset-check.js';
+import nodemailer from 'nodemailer';
+
 
 // 获取 ESM 下的 __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -28,6 +30,10 @@ const DEFAULT_CONFIG = {
     weeklyResetHour: 9
   },
   maxHistoryCount: 50,
+  emailBackupConfig: {
+    email: "",
+    autoBackupOnReset: true
+  },
   roles: [
     "角色1",
     "角色2",
@@ -193,6 +199,10 @@ function readJsonFile(filePath, defaultContent = {}) {
         parsed.resetConfig = { ...DEFAULT_CONFIG.resetConfig };
         needsFix = true;
       }
+      if (!parsed.emailBackupConfig || typeof parsed.emailBackupConfig !== 'object') {
+        parsed.emailBackupConfig = { ...DEFAULT_CONFIG.emailBackupConfig };
+        needsFix = true;
+      }
       if (needsFix) {
         fs.writeFileSync(filePath, JSON.stringify(parsed, null, 2), 'utf-8');
       }
@@ -215,6 +225,66 @@ function saveJsonFile(filePath, content) {
     return false;
   }
 }
+
+// 异步发送用户备份邮件
+async function sendEmailBackup(nickname) {
+  const { configPath, dataPath, historyPath } = getUserPaths(nickname);
+  const config = readJsonFile(configPath);
+  const receiver = config.emailBackupConfig?.email;
+
+  if (!receiver) {
+    console.log(`[邮件备份] 用户 "${nickname}" 未配置备份邮箱，跳过备份。`);
+    return { success: false, reason: '未配置邮箱' };
+  }
+
+  const host = process.env.SMTP_HOST;
+  const port = process.env.SMTP_PORT;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!user || !pass) {
+    console.warn(`[邮件备份] 系统环境变量未配置 SMTP_USER 或 SMTP_PASS，无法为用户 "${nickname}" 发送备份。`);
+    return { success: false, reason: '系统未配置SMTP发信凭证' };
+  }
+
+  console.log(`[邮件备份] 正在尝试为用户 "${nickname}" 发送备份邮件至 ${receiver}...`);
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: host || 'smtp.qq.com',
+      port: parseInt(port || '465'),
+      secure: parseInt(port || '465') === 465,
+      auth: { user, pass }
+    });
+
+    const attachments = [];
+    if (fs.existsSync(configPath)) {
+      attachments.push({ filename: `config_${nickname}.json`, content: fs.readFileSync(configPath) });
+    }
+    if (fs.existsSync(dataPath)) {
+      attachments.push({ filename: `data_${nickname}.json`, content: fs.readFileSync(dataPath) });
+    }
+    if (fs.existsSync(historyPath)) {
+      attachments.push({ filename: `history_${nickname}.json`, content: fs.readFileSync(historyPath) });
+    }
+
+    const mailOptions = {
+      from: `"阿尔特里亚备份服务" <${user}>`,
+      to: receiver,
+      subject: `【数据备份】阿尔特里亚大陆考勤簿 - ${nickname} - ${new Date().toLocaleDateString()}`,
+      text: `您好，这是您在阿尔特里亚大陆考勤簿的用户数据备份。\n\n备份生成时间：${new Date().toLocaleString()}\n用户昵称：${nickname}\n\n附件中包含了您的配置、角色进度以及每周历史快照，如有需要，可将附件文件覆盖到服务器 data/ 目录下对应的文件进行恢复。`,
+      attachments
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[邮件备份] 用户 "${nickname}" 的数据备份邮件发送成功！(MessageID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (err) {
+    console.error(`[邮件备份] 发送备份邮件失败:`, err);
+    return { success: false, error: err.message };
+  }
+}
+
 
 // 获取系统访问密码配置（优先读取 config.json 中的 adminPassword，次之读取环境变量）
 function getSystemPassword() {
@@ -384,7 +454,11 @@ app.get('/api/status', (req, res) => {
   const data = readJsonFile(dataPath);
 
   const now = new Date();
-  const resetTriggered = checkAndReset(data, config, now, historyPath);
+  const resetTriggered = checkAndReset(data, config, now, historyPath, () => {
+    if (config.emailBackupConfig?.email && config.emailBackupConfig?.autoBackupOnReset) {
+      sendEmailBackup(req.nickname);
+    }
+  });
   if (resetTriggered) {
     saveJsonFile(dataPath, data);
   }
@@ -416,7 +490,11 @@ app.post('/api/save', (req, res) => {
   }
 
   const now = new Date();
-  checkAndReset(data, config, now, historyPath);
+  checkAndReset(data, config, now, historyPath, () => {
+    if (config.emailBackupConfig?.email && config.emailBackupConfig?.autoBackupOnReset) {
+      sendEmailBackup(req.nickname);
+    }
+  });
 
   saveJsonFile(dataPath, data);
 
@@ -487,7 +565,11 @@ app.post('/api/config', (req, res) => {
   alignDataStructure(data, newConfig);
 
   const now = new Date();
-  checkAndReset(data, newConfig, now, historyPath);
+  checkAndReset(data, newConfig, now, historyPath, () => {
+    if (newConfig.emailBackupConfig?.email && newConfig.emailBackupConfig?.autoBackupOnReset) {
+      sendEmailBackup(req.nickname);
+    }
+  });
   saveJsonFile(dataPath, data);
 
   res.json({
@@ -532,6 +614,9 @@ app.post('/api/force-reset', (req, res) => {
       }
       saveJsonFile(historyPath, history);
       console.log(`[手动重置] 历史快照保存成功。当前历史条数: ${history.length}`);
+      if (config.emailBackupConfig?.email && config.emailBackupConfig?.autoBackupOnReset) {
+        sendEmailBackup(req.nickname);
+      }
     } catch (e) {
       console.error('[手动重置] 历史快照保存失败:', e);
     }
@@ -563,6 +648,24 @@ app.post('/api/history/clear', (req, res) => {
   const { historyPath } = getOrInitUserFiles(req.nickname);
   saveJsonFile(historyPath, []);
   res.json({ success: true });
+});
+
+// 手动测试/即时发送邮件备份接口
+app.post('/api/backup/email-test', async (req, res) => {
+  const { configPath } = getOrInitUserFiles(req.nickname);
+  const config = readJsonFile(configPath);
+  const receiver = config.emailBackupConfig?.email;
+
+  if (!receiver) {
+    return res.status(400).json({ error: 'invalid_email', message: '您尚未配置接收备份的邮箱地址，请先在配置中填写。' });
+  }
+
+  const result = await sendEmailBackup(req.nickname);
+  if (result.success) {
+    res.json({ success: true, message: `已成功向 ${receiver} 发送数据备份邮件` });
+  } else {
+    res.status(500).json({ error: 'send_failed', message: `发送备份邮件失败：${result.error || result.reason}` });
+  }
 });
 
 // 托管前端构建后的静态文件

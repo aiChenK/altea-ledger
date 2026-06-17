@@ -5,6 +5,10 @@
     "weeklyResetHour": 9
   },
   "maxHistoryCount": 50,
+  "emailBackupConfig": {
+    "email": "aichenk@qq.com",
+    "autoBackupOnReset": true
+  },
   "roles": [
     "角色1",
     "角色3",

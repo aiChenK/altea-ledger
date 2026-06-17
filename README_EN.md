@@ -31,6 +31,9 @@ This is a **high-density, dark frosted glass (Glassmorphism) style** character w
 - 🔒 **Multi-User Isolation & Validation**:
   - Configure credentials via environment variables for multi-user authentication. User data is physically isolated in separate config, data, and history files.
   - Backward compatible with single-user password verification (`ADMIN_PASSWORD`) and guest mode. Remembers credentials using `LocalStorage` with a logout button.
+- 📧 **Automatic & Manual Email Backup**:
+  - Bind a sender email (e.g., Gmail, Outlook, QQ Mail). Before weekly resets clear your weekly dungeon progress, it silently sends the configuration, character progress, and history files as email attachments in the background.
+  - One-click "Send Test Backup Email" button in the settings drawer for instant on-demand manual backups.
 
 ---
 
@@ -108,6 +111,10 @@ services:
 | `USERS_AUTH` | Multi-user credentials, comma-separated. Passwords must be unique | `User1:pwd1,User2:pwd2` |
 | `ADMIN_PASSWORD` | Single-user access password (can be modified in settings) | `your_password` |
 | `PORT` | Server listening port | `3001` |
+| `SMTP_HOST` | Mail server SMTP host name | `smtp.gmail.com` |
+| `SMTP_PORT` | Mail server SMTP port | `465` (utilizes SSL) |
+| `SMTP_USER` | Email account used for sending | `sender_account@gmail.com` |
+| `SMTP_PASS` | SMTP application-specific auth code (not your login password) | `abcdefghijklmnop` |
 
 > [!IMPORTANT]
 > **Data Persistence & Initialization**:

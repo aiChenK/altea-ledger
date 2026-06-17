@@ -28,6 +28,7 @@ function App() {
   // 配置抽屉状态
   const [isConfigDrawerOpen, setIsConfigDrawerOpen] = useState(false);
   const [drawerConfig, setDrawerConfig] = useState(null);
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
   const [newRoleInput, setNewRoleInput] = useState('');
   const [newWeeklyInput, setNewWeeklyInput] = useState({ name: '', key: '', baseCount: 1 });
   const [draggedWeeklyIndex, setDraggedWeeklyIndex] = useState(null);
@@ -1003,6 +1004,35 @@ function App() {
       showToast('修改配置失败，请检查网络', 'error');
     }
   };
+
+  const handleSendTestEmail = async () => {
+    const email = drawerConfig.emailBackupConfig?.email?.trim();
+    if (!email) {
+      showToast('请先输入备份邮箱地址', 'warning');
+      return;
+    }
+
+    setIsSendingTestEmail(true);
+    try {
+      const res = await authFetch('/api/backup/email-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showToast(result.message || '测试备份邮件已成功发送！', 'success');
+      } else {
+        showToast(result.message || '发送失败，请检查邮箱及发信凭证配置', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('发送请求失败，请检查网络或服务器配置', 'error');
+    } finally {
+      setIsSendingTestEmail(false);
+    }
+  };
+
 
   const handleWeeklyDragStart = (e, index) => {
     setDraggedWeeklyIndex(index);
@@ -2129,6 +2159,67 @@ function App() {
                     🗑️ 清空所有历史归档记录
                   </button>
                 </div>
+              </div>
+
+              {/* 邮件备份配置区块 */}
+              <div className="config-section">
+                <h3>📧 邮件自动备份设置</h3>
+                <div className="input-label-group">
+                  <label>接收备份的邮箱地址</label>
+                  <input
+                    type="email"
+                    placeholder="例如 your-email@example.com"
+                    value={drawerConfig.emailBackupConfig?.email || ''}
+                    onChange={(e) => setDrawerConfig({
+                      ...drawerConfig,
+                      emailBackupConfig: {
+                        ...(drawerConfig.emailBackupConfig || { autoBackupOnReset: true }),
+                        email: e.target.value
+                      }
+                    })}
+                  />
+                </div>
+                <div className="input-label-group" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+                  <label htmlFor="autoBackupOnReset" style={{ margin: 0, cursor: 'pointer', fontSize: '0.78rem' }}>每周重置时自动发送备份</label>
+                  <input
+                    id="autoBackupOnReset"
+                    type="checkbox"
+                    style={{ width: 'auto', cursor: 'pointer' }}
+                    checked={drawerConfig.emailBackupConfig?.autoBackupOnReset ?? true}
+                    onChange={(e) => setDrawerConfig({
+                      ...drawerConfig,
+                      emailBackupConfig: {
+                        ...(drawerConfig.emailBackupConfig || { email: '' }),
+                        autoBackupOnReset: e.target.checked
+                      }
+                    })}
+                  />
+                </div>
+                {drawerConfig.emailBackupConfig?.email && (
+                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.06)' }}>
+                    <button
+                      className="btn-secondary"
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        borderRadius: '6px',
+                        fontSize: '0.78rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#fff',
+                        cursor: isSendingTestEmail ? 'not-allowed' : 'pointer'
+                      }}
+                      onClick={handleSendTestEmail}
+                      disabled={isSendingTestEmail}
+                    >
+                      {isSendingTestEmail ? '⏳ 正在发送测试邮件...' : '✉️ 发送一次即时备份邮件'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* 安全验证与密码设置 */}
