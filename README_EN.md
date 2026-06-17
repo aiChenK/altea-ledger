@@ -1,6 +1,6 @@
 # 🐉 Alteia Ledger (altea-ledger)
 
-This is a **high-density, dark frosted glass (Glassmorphism) style** character weekly and daily status tracking system designed specifically for Dragon Nest players. It completely replaces cumbersome, hard-to-use traditional Excel sheets, providing a more intuitive multi-character comparison, automatic cycle reset, online configuration management, and weekly history archiving & backup features.
+This is a **high-density, dark frosted glass (Glassmorphism) style** character weekly and daily status tracking system designed specifically for Dragon Nest players. It completely replaces cumbersome, hard-to-use traditional Excel sheets, providing intuitive multi-character management, automatic cycle reset, online configuration management, in-game gold balance ledger, and weekly history snapshot archiving & backup features.
 
 ### 📸 Preview
 
@@ -12,37 +12,25 @@ This is a **high-density, dark frosted glass (Glassmorphism) style** character w
 
 ## ✨ Core Features
 
-- 🎮 **Multi-Character Ultra-Narrow Horizontal Comparison**: Specially optimized for 1080p and various resolutions with a high-density layout. Character column width is locked at `76px`, allowing quick horizontal comparisons on a single screen.
-- ⚡ **Smart Reset Mechanism**:
+- 🎮 **Multi-Character Management**: Supports displaying multiple characters side-by-side for quick viewing and management on a single screen.
+- ⚡ **Smart Cycle Reset**:
   - **Daily Reset**: Automatically resets daily states (Attendance, Potion, Daily Quest, Lucky Zone, AFK stage, etc.) every day at **09:00 AM**.
-  - **Weekly Reset**: Automatically resets weekly dungeons/stages every Saturday at **09:00 AM**.
-  - **Auto Trigger**: The backend automatically compares the current standard time with the last reset timestamp upon each request, performing silent resets and data alignment seamlessly.
-- 🦢 **Asset & Buff Management**:
-  - Track assets such as Gold and Costume Sets for each character.
-  - Visualize Golden Goose Buff expiration times with support for quick extension (+7 days) and precise countdown alerts.
-- ⏳ **Weekly History Archiving**:
-  - Upon weekly resets (either automatic or manually forced), the system automatically creates a **historical snapshot** of all states and memos for the current week.
-  - Dynamically configurable archive limit (defaults to keeping the latest 50 versions), automatically purging the oldest archives when the limit is exceeded.
-  - Features a sliding sidebar archive drawer and a read-only detailed table modal, along with a secure option to clear all archives with a single click.
+  - **Weekly Reset**: Automatically resets weekly dungeons/stages every Saturday at **09:00 AM**, creating a historical snapshot beforehand.
+  - **Auto Trigger**: No background persistent timers. The backend automatically performs silent resets and data alignment based on client request timestamps.
+- 🦢 **Custom Tracking & Management**:
+  - Dynamically enable default assets or add customized items (types supported: Number, Countdown Card, and Multi-stage Progress Dots).
+  - Hide, rename, and sort all assets and tracking items visually via drag-and-drop.
+- 📈 **Gold Ledger & Balance Statistics**:
+  - Record gold transactions (supports categorizing general income/expenses and "RMT buying/selling", recording rates, fees, and auto-filling remarks).
+  - Group transactions by year and month in collapsible tables. Supports importing/exporting raw comma-separated text back-ups. Displays records in reverse chronological order.
+- ⏳ **History Snapshot Archiving**:
+  - Automatically creates a historical snapshot of all states and memos during weekly resets (stores up to 50 versions, auto-purging oldest).
+  - Review archived data in a read-only detailed layout sidebar drawer or table modal, with a secure option to clear all archives.
 - 📌 **Flowing Memo Tags**:
-  - Global memo utilizes a sticker tag design. Simply press Enter to generate a tag, and click the `×` on the tag tail to delete it anytime.
-  - Read-only archived memo tags are also displayed in the history snapshot detailed modal.
-- ⚙️ **Online Visual Configuration**:
-  - Allows direct creation or deletion of characters and weekly dungeons on the webpage, with support for fine-tuning base clears for each dungeon (e.g., Green Dragon HC: 1 clear, Guardian Nest: 2 clears, etc.).
-  - Configures daily/weekly reset hours and the historical record limit directly from the frontend panel.
-- 🔒 **Secure Access Validation**:
-  - **Default Passwordless**: Direct entry into the system if no password is configured.
-  - **Environment Variable Injection**: Set an initial access password via the `ADMIN_PASSWORD` environment variable (Docker compatible).
-  - **System Panel Modification**: Modify or clear the access password directly in the configuration drawer.
-  - **Browser Remembers Password**: The browser remembers the correct password using `LocalStorage`, preventing repeated logins on the same device.
-
----
-
-## 🛠️ Technology Stack
-
-- **Frontend**: React (Vite) + Hooks (`useState`, `useEffect`, `useRef`) + Vanilla CSS (Glassmorphism Visual System)
-- **Backend**: Node.js + Express + CORS
-- **Database**: Lightweight local JSON file storage, writing and syncing data in real time.
+  - Tag-style memo board. Press Enter to add a tag, click `×` to delete. Memos are archived along with weekly history snapshots.
+- 🔒 **Multi-User Isolation & Validation**:
+  - Configure credentials via environment variables for multi-user authentication. User data is physically isolated in separate config, data, and history files.
+  - Backward compatible with single-user password verification (`ADMIN_PASSWORD`) and guest mode. Remembers credentials using `LocalStorage` with a logout button.
 
 ---
 
@@ -50,74 +38,49 @@ This is a **high-density, dark frosted glass (Glassmorphism) style** character w
 
 ### 1. Install Dependencies
 
-Run the following command in the project root directory:
-
 ```bash
 npm install
 ```
 
 ### 2. Local Development Mode
 
-Start the frontend Vite development server and the backend Express API server simultaneously:
+Start the frontend Vite development server and the backend Express API server simultaneously (frontend is pre-configured to proxy `/api` requests to `localhost:3001`):
 
-- Start the frontend development server (supports Hot Module Replacement, running on port `5173` by default, with `/api` proxied to the backend):
-  ```bash
-  npm run dev
-  ```
-- Start the backend API service (running on port `3001` by default):
-  ```bash
-  npm run server
-  ```
+```bash
+# Start Vite frontend (default port 5173)
+npm run dev
 
-### 3. Production Build & Start (Single-Command Run)
+# Start Express backend (default port 3001)
+npm run server
+```
 
-If you want to compile the program and host it on a server or a local area network, run:
+### 3. Production Build & Start
 
 ```bash
 npm start
 ```
-> This command will first run `npm run build` to package the frontend, and then the backend on port `3001` will serve the static files and API services directly.
-> Once started, visit in your browser: **[http://localhost:3001](http://localhost:3001)**
+> This command runs `npm run build` to package the frontend assets and hosts them directly on Express at port `3001` along with the API. Visit: **[http://localhost:3001](http://localhost:3001)**
 
-### 4. Docker Deployment (Recommended)
+---
 
-The official Docker image for this project is hosted on Docker Hub: **[aichenk/altea-ledger](https://hub.docker.com/r/aichenk/altea-ledger)**.
+## 🐳 Docker Deployment
 
-Pull and run the container directly (mount local data directory, set local timezone, and configure the access password):
+### 1. Run Container Directly
+
 ```bash
 docker run -d \
   -p 3001:3001 \
   -v $(pwd)/data:/app/data \
   -e TZ=Asia/Shanghai \
-  -e ADMIN_PASSWORD=your_password \
+  -e USERS_AUTH="User1:pass123,User2:pwd456" \
   --name altea-ledger \
   aichenk/altea-ledger:latest
 ```
 
-> [!IMPORTANT]
-> **Access Password Validation (`ADMIN_PASSWORD`)**
-> - You can pass the `-e ADMIN_PASSWORD=your_password` environment variable to configure the initial password. Leave it blank for passwordless mode.
-> - Once logged in, you can modify or clear the access password in the Configuration Panel. The changes will overwrite the environment variable and persist locally.
-> - The browser remembers the correct password using `LocalStorage`, so you won't need to retype it on the same device.
->
-> **Timezone Configuration (`TZ`)**
-> The automatic daily (09:00 AM) and weekly (Saturday 09:00 AM) reset triggers heavily rely on the container's local system time. Please specify your timezone using the `-e TZ=Asia/Shanghai` environment variable (change it to your local timezone if needed).
->
-> **Data Persistence**
-> All data is stored in the `/app/data` directory. Mounting `-v $(pwd)/data:/app/data` ensures that your characters' configurations and progresses are not lost when the container restarts.
-> If the mounted `./data` directory on the host is empty on the first run, make sure to copy the `data/config.json` template file from the source code to the mounted folder first. Otherwise, the system will initialize with an empty config due to the missing layout description.
+### 2. Deploy with Docker Compose
 
-### 5. Docker Compose Deployment (Recommended)
+Deploy using the `docker-compose.yml` file located in the project root:
 
-If you have Docker Compose installed, you can use the `docker-compose.yml` file in the project root for one-command deployment.
-
-#### Start Service
-Simply run in the root directory:
-```bash
-docker compose up -d
-```
-
-#### `docker-compose.yml` configuration:
 ```yaml
 version: '3.8'
 
@@ -132,13 +95,21 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - PORT=3001
-      - ADMIN_PASSWORD=your_password  # Access password. Leave blank for passwordless mode. Can also be modified via settings drawer.
+      - USERS_AUTH=User1:pass123,User2:pwd456  # Multi-user config, format: "Nickname1:Password1,Nickname2:Password2"
+      - ADMIN_PASSWORD=your_password        # Single-user password (only takes effect if USERS_AUTH is not set)
     restart: always
 ```
 
----
+### 3. Environment Variables
 
-## ⚙️ Reset Rules
+| Variable | Description | Default / Example |
+| :--- | :--- | :--- |
+| `TZ` | Container timezone. Reset logic heavily depends on this config | `Asia/Shanghai` |
+| `USERS_AUTH` | Multi-user credentials, comma-separated. Passwords must be unique | `User1:pwd1,User2:pwd2` |
+| `ADMIN_PASSWORD` | Single-user access password (can be modified in settings) | `your_password` |
+| `PORT` | Server listening port | `3001` |
 
-- **Reset Check**: The system has no background persistent timer, avoiding multi-process conflicts. Each time the frontend fetches data (`GET /api/status`) or saves data, the backend automatically invokes `checkAndReset`, performing swift and safe cross-cycle evaluations.
-- **Configuration Sync**: When you add or delete characters or dungeons via the "Configuration Management Panel", the system automatically aligns the data structures in `data.json`, removing deprecated fields and populating new fields with default values, preventing page crashes due to malformed data.
+> [!IMPORTANT]
+> **Data Persistence & Initialization**:
+> - All application data is stored in `/app/data` inside the container. Mount `-v $(pwd)/data:/app/data` to persist your data.
+> - **First-time Run**: If the host folder `./data` is empty, make sure to copy the `data/config.json` template file from the source code into the mounted host folder beforehand. Otherwise, the system will fail to load default layouts due to missing configurations.

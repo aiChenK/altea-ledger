@@ -38,6 +38,12 @@ export function alignDataStructure(data, config) {
     modified = true;
   }
 
+  // 1.5. 确保 transactions 存在
+  if (!data.transactions) {
+    data.transactions = [];
+    modified = true;
+  }
+
   // 2. 移除不存在于配置中的角色，补充新角色
   const configuredRoles = new Set(config.roles);
   for (const role of Object.keys(data.characters)) {

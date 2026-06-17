@@ -403,13 +403,16 @@ app.post('/api/save', (req, res) => {
   const config = readJsonFile(configPath);
   const data = readJsonFile(dataPath);
 
-  const { characters, globalMemo } = req.body;
+  const { characters, globalMemo, transactions } = req.body;
 
   if (characters !== undefined) {
     data.characters = characters;
   }
   if (globalMemo !== undefined) {
     data.globalMemo = globalMemo;
+  }
+  if (transactions !== undefined) {
+    data.transactions = transactions;
   }
 
   const now = new Date();
