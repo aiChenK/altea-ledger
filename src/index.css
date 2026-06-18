@@ -118,29 +118,25 @@ input:focus, textarea:focus {
   box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.2);
 }
 
-/* 一些全局动效类 */
-@keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 8px rgba(244, 63, 94, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 16px rgba(244, 63, 94, 0.45);
-  }
-}
-
-@keyframes pulseGold {
-  0%, 100% {
-    box-shadow: 0 0 8px rgba(234, 179, 8, 0.15);
-  }
-  50% {
-    box-shadow: 0 0 16px rgba(234, 179, 8, 0.35);
-  }
-}
-
+/* 一些全局发光效果类 - 优化为高颜值静态发光 + Hover 交互动效，彻底解决 CPU 占用与重绘卡顿问题 */
 .glow-complete {
-  animation: pulseGlow 3s infinite;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.25);
+  border-color: rgba(244, 63, 94, 0.5) !important;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.glow-complete:hover {
+  box-shadow: 0 0 16px rgba(244, 63, 94, 0.55);
+  border-color: rgba(244, 63, 94, 0.75) !important;
 }
 
 .glow-progress {
-  animation: pulseGold 3s infinite;
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.2);
+  border-color: rgba(234, 179, 8, 0.45) !important;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.glow-progress:hover {
+  box-shadow: 0 0 16px rgba(234, 179, 8, 0.45);
+  border-color: rgba(234, 179, 8, 0.65) !important;
 }
