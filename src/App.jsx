@@ -86,6 +86,11 @@ function App() {
   const [importText, setImportText] = useState('');
   const [expandedYears, setExpandedYears] = useState({});
 
+  // 金币历史状态
+  const [isGoldHistoryDrawerOpen, setIsGoldHistoryDrawerOpen] = useState(false);
+  const [goldActiveTab, setGoldActiveTab] = useState('daily');
+  const [expandedGoldDays, setExpandedGoldDays] = useState({});
+
   // 触发 Toast 提示
   const showToast = (message, type = 'success') => {
     if (toastTimerRef.current) {
@@ -859,6 +864,25 @@ function App() {
     }
   };
 
+  // 一键清空所有金币历史记录
+  const handleClearGoldHistory = async () => {
+    try {
+      const res = await authFetch('/api/gold-history/clear', {
+        method: 'POST'
+      });
+      const result = await res.json();
+      if (result.success) {
+        setData({ ...data, goldHistory: [] });
+        showToast('所有金币历史快照已被成功清空！', 'success');
+      } else {
+        showToast('清空失败：' + (result.message || '未知错误'), 'error');
+      }
+    } catch (err) {
+      console.error('清空金币历史失败:', err);
+      showToast('操作失败，请检查后端服务', 'error');
+    }
+  };
+
   // 注销登录并回到验证锁屏
   const handleLogout = () => {
     triggerConfirm({
@@ -1231,6 +1255,7 @@ function App() {
           >
             📅
           </button>
+          <button className="btn-icon" title="金币账本" onClick={() => setIsGoldHistoryDrawerOpen(true)}>🪙</button>
           <button className="btn-icon" title="历史记录" onClick={handleOpenHistory}>⏳</button>
           <button className="btn-icon" title="设置" onClick={handleOpenConfigDrawer}>⚙️</button>
         </div>
@@ -1589,6 +1614,399 @@ function App() {
               <button className="btn-secondary" onClick={() => setActiveDatetimeModal(null)}>取消</button>
               <button className="btn-danger" onClick={handleClearDatetime}>清除</button>
               <button className="btn-success btn-primary" onClick={handleSaveDatetime}>保存</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🪙 金币历史与统计侧边抽屉 */}
+      {isGoldHistoryDrawerOpen && (
+        <div className="drawer-backdrop" onClick={() => setIsGoldHistoryDrawerOpen(false)}>
+          <div className="drawer-content gold-history-drawer" onClick={(e) => e.stopPropagation()} style={{ width: '520px', maxWidth: '95%' }}>
+            <div className="drawer-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.5rem' }}>🪙</span>
+                <h2>金币账本与统计</h2>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {data && data.goldHistory && data.goldHistory.length > 0 && (
+                  <button
+                    className="btn-danger"
+                    style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px', opacity: 0.8 }}
+                    onClick={() => triggerConfirm({
+                      title: '🗑️ 清空金币账本',
+                      message: '确定要清空所有的金币历史记录吗？此操作无法恢复。',
+                      confirmText: '确认清空',
+                      danger: true,
+                      onConfirm: handleClearGoldHistory
+                    })}
+                  >
+                    清空账本
+                  </button>
+                )}
+                <button style={{ fontSize: '1.5rem', background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }} onClick={() => setIsGoldHistoryDrawerOpen(false)}>×</button>
+              </div>
+            </div>
+
+            <div className="ledger-tabs" style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <button
+                className={`ledger-tab ${goldActiveTab === 'daily' ? 'active' : ''}`}
+                onClick={() => setGoldActiveTab('daily')}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  textAlign: 'center',
+                  background: goldActiveTab === 'daily' ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
+                  color: goldActiveTab === 'daily' ? '#fbbf24' : '#a1a1aa',
+                  fontWeight: goldActiveTab === 'daily' ? '600' : '400',
+                  borderBottom: goldActiveTab === 'daily' ? '2px solid #fbbf24' : 'none',
+                  fontSize: '0.9rem'
+                }}
+              >
+                📅 每日变化
+              </button>
+              <button
+                className={`ledger-tab ${goldActiveTab === 'monthly' ? 'active' : ''}`}
+                onClick={() => setGoldActiveTab('monthly')}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  textAlign: 'center',
+                  background: goldActiveTab === 'monthly' ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
+                  color: goldActiveTab === 'monthly' ? '#fbbf24' : '#a1a1aa',
+                  fontWeight: goldActiveTab === 'monthly' ? '600' : '400',
+                  borderBottom: goldActiveTab === 'monthly' ? '2px solid #fbbf24' : 'none',
+                  fontSize: '0.9rem'
+                }}
+              >
+                📊 每月汇总
+              </button>
+              <button
+                className={`ledger-tab ${goldActiveTab === 'analysis' ? 'active' : ''}`}
+                onClick={() => setGoldActiveTab('analysis')}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  textAlign: 'center',
+                  background: goldActiveTab === 'analysis' ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
+                  color: goldActiveTab === 'analysis' ? '#fbbf24' : '#a1a1aa',
+                  fontWeight: goldActiveTab === 'analysis' ? '600' : '400',
+                  borderBottom: goldActiveTab === 'analysis' ? '2px solid #fbbf24' : 'none',
+                  fontSize: '0.9rem'
+                }}
+              >
+                👤 角色分析
+              </button>
+            </div>
+
+            <div className="drawer-body" style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
+              {(!data || !data.goldHistory || data.goldHistory.length === 0) ? (
+                <div style={{ textAlign: 'center', opacity: 0.4, padding: '60px 0', fontSize: '0.9rem' }}>
+                  🪙 暂无金币历史快照<br/>
+                  <span style={{ fontSize: '0.75rem', display: 'block', marginTop: '8px' }}>
+                    系统将在每日早上重置时（或您手动执行每日重置时）自动记录当时各角色的金币存量。
+                  </span>
+                </div>
+              ) : (
+                <>
+                  {/* 1. 每日变化 Tab */}
+                  {goldActiveTab === 'daily' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {data.goldHistory.map((item) => {
+                        // 计算当天总金币与总变化
+                        let totalGold = 0;
+                        let totalChange = 0;
+                        if (item.roles) {
+                          Object.keys(item.roles).forEach(r => {
+                            totalGold += Number(item.roles[r].gold || 0);
+                            totalChange += Number(item.roles[r].change || 0);
+                          });
+                        }
+                        const isExpanded = !!expandedGoldDays[item.date];
+
+                        return (
+                          <div
+                            key={item.date}
+                            className="glass-panel"
+                            style={{
+                              padding: '12px 16px',
+                              border: '1px solid rgba(255, 255, 255, 0.05)',
+                              borderRadius: '12px',
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => setExpandedGoldDays({
+                              ...expandedGoldDays,
+                              [item.date]: !isExpanded
+                            })}
+                          >
+                            {/* 折叠头部 */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <span style={{ fontWeight: '600', fontSize: '1rem', color: '#f8fafc' }}>{item.date}</span>
+                                <span style={{ fontSize: '0.75rem', opacity: 0.35, marginLeft: '8px' }}>
+                                  ({new Date(item.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })})
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ textAlign: 'right' }}>
+                                  <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>
+                                    总计: <span style={{ fontWeight: '500', color: '#fbbf24' }}>{totalGold.toLocaleString()}</span>
+                                  </div>
+                                  <div style={{
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600',
+                                    color: totalChange > 0 ? '#4ade80' : totalChange < 0 ? '#f87171' : '#a1a1aa'
+                                  }}>
+                                    {totalChange > 0 ? `+${totalChange.toLocaleString()}` : totalChange.toLocaleString()}
+                                  </div>
+                                </div>
+                                <span style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s', opacity: 0.4, fontSize: '0.8rem' }}>▶</span>
+                              </div>
+                            </div>
+
+                            {/* 展开角色明细 */}
+                            {isExpanded && item.roles && (
+                              <div
+                                style={{
+                                  marginTop: '12px',
+                                  paddingTop: '10px',
+                                  borderTop: '1px solid rgba(255,255,255,0.06)',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '8px',
+                                  cursor: 'default'
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {Object.keys(item.roles).map(role => {
+                                  const rInfo = item.roles[role];
+                                  const rChange = Number(rInfo.change || 0);
+                                  return (
+                                    <div key={role} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                                      <span style={{ opacity: 0.8, color: '#e2e8f0' }}>{role}</span>
+                                      <div style={{ display: 'flex', gap: '15px' }}>
+                                        <span style={{ opacity: 0.6 }}>{Number(rInfo.gold || 0).toLocaleString()} 金</span>
+                                        <span style={{
+                                          fontWeight: '500',
+                                          width: '70px',
+                                          textAlign: 'right',
+                                          color: rChange > 0 ? '#4ade80' : rChange < 0 ? '#f87171' : '#a1a1aa'
+                                        }}>
+                                          {rChange > 0 ? `+${rChange.toLocaleString()}` : rChange.toLocaleString()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* 2. 每月汇总 Tab */}
+                  {goldActiveTab === 'monthly' && (() => {
+                    // 按月份分组计算
+                    const monthlyData = {};
+                    data.goldHistory.forEach(record => {
+                      const monthStr = record.date.substring(0, 7); // YYYY-MM
+                      if (!monthlyData[monthStr]) {
+                        monthlyData[monthStr] = {
+                          month: monthStr,
+                          totalChange: 0,
+                          roleChanges: {}
+                        };
+                      }
+                      
+                      if (record.roles) {
+                        Object.keys(record.roles).forEach(role => {
+                          const rChange = Number(record.roles[role].change || 0);
+                          monthlyData[monthStr].totalChange += rChange;
+                          monthlyData[monthStr].roleChanges[role] = (monthlyData[monthStr].roleChanges[role] || 0) + rChange;
+                        });
+                      }
+                    });
+
+                    const sortedMonths = Object.keys(monthlyData).sort().reverse();
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        {sortedMonths.map(mKey => {
+                          const mInfo = monthlyData[mKey];
+                          const [year, month] = mKey.split('-');
+                          return (
+                            <div
+                              key={mKey}
+                              className="glass-panel"
+                              style={{
+                                padding: '14px 16px',
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                borderRadius: '12px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '8px' }}>
+                                <span style={{ fontWeight: '700', fontSize: '1.05rem', color: '#fbbf24' }}>
+                                  {year}年{month}月
+                                </span>
+                                <span style={{
+                                  fontWeight: '600',
+                                  fontSize: '0.9rem',
+                                  color: mInfo.totalChange > 0 ? '#4ade80' : mInfo.totalChange < 0 ? '#f87171' : '#a1a1aa'
+                                }}>
+                                  月净变动: {mInfo.totalChange > 0 ? `+${mInfo.totalChange.toLocaleString()}` : mInfo.totalChange.toLocaleString()}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {config.roles.map(role => {
+                                  const rChange = mInfo.roleChanges[role] || 0;
+                                  return (
+                                    <div key={role} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                                      <span style={{ opacity: 0.8 }}>{role}</span>
+                                      <span style={{
+                                        fontWeight: '600',
+                                        color: rChange > 0 ? '#4ade80' : rChange < 0 ? '#f87171' : '#a1a1aa'
+                                      }}>
+                                        {rChange > 0 ? `+${rChange.toLocaleString()}` : rChange.toLocaleString()}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  {/* 3. 角色分析 Tab */}
+                  {goldActiveTab === 'analysis' && (() => {
+                    // 对每个角色分析：累计增量、累计消耗、走势列表
+                    const analysisData = {};
+                    config.roles.forEach(role => {
+                      analysisData[role] = {
+                        earned: 0,
+                        spent: 0,
+                        net: 0,
+                        history: []
+                      };
+                    });
+
+                    // 倒序遍历（从早到晚），用于构建走势明细
+                    const reversedHistory = [...data.goldHistory].reverse();
+                    reversedHistory.forEach(record => {
+                      if (record.roles) {
+                        Object.keys(record.roles).forEach(role => {
+                          if (analysisData[role]) {
+                            const change = Number(record.roles[role].change || 0);
+                            if (change > 0) {
+                              analysisData[role].earned += change;
+                            } else if (change < 0) {
+                              analysisData[role].spent += Math.abs(change);
+                            }
+                            analysisData[role].net += change;
+                            analysisData[role].history.unshift({
+                              date: record.date,
+                              change: change,
+                              gold: Number(record.roles[role].gold || 0)
+                            });
+                          }
+                        });
+                      }
+                    });
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        {config.roles.map(role => {
+                          const rData = analysisData[role];
+                          const currentGold = Number(data.characters[role]?.assets?.gold || 0);
+                          const last7Changes = rData.history.slice(0, 7);
+
+                          return (
+                            <div
+                              key={role}
+                              className="glass-panel"
+                              style={{
+                                padding: '14px 16px',
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                borderRadius: '12px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                <span style={{ fontWeight: '700', fontSize: '1.05rem', color: '#e2e8f0' }}>{role}</span>
+                                <span style={{ fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.6)' }}>
+                                  当前: <span style={{ fontWeight: '600', color: '#fbbf24' }}>{currentGold.toLocaleString()}</span> 金
+                                </span>
+                              </div>
+
+                              {/* 统计区块 */}
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px', textAlign: 'center' }}>
+                                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '6px', borderRadius: '6px' }}>
+                                  <div style={{ fontSize: '0.7rem', opacity: 0.4 }}>累计收入</div>
+                                  <div style={{ fontSize: '0.8rem', color: '#4ade80', fontWeight: '600', marginTop: '2px' }}>
+                                    +{rData.earned.toLocaleString()}
+                                  </div>
+                                </div>
+                                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '6px', borderRadius: '6px' }}>
+                                  <div style={{ fontSize: '0.7rem', opacity: 0.4 }}>累计支出</div>
+                                  <div style={{ fontSize: '0.8rem', color: '#f87171', fontWeight: '600', marginTop: '2px' }}>
+                                    -{rData.spent.toLocaleString()}
+                                  </div>
+                                </div>
+                                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '6px', borderRadius: '6px' }}>
+                                  <div style={{ fontSize: '0.7rem', opacity: 0.4 }}>净变化</div>
+                                  <div style={{
+                                    fontSize: '0.8rem',
+                                    fontWeight: '600',
+                                    marginTop: '2px',
+                                    color: rData.net > 0 ? '#4ade80' : rData.net < 0 ? '#f87171' : '#a1a1aa'
+                                  }}>
+                                    {rData.net > 0 ? `+${rData.net.toLocaleString()}` : rData.net.toLocaleString()}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 走势微列表 */}
+                              <div>
+                                <div style={{ fontSize: '0.75rem', opacity: 0.35, marginBottom: '6px' }}>最近 7 次变动记录:</div>
+                                {last7Changes.length === 0 ? (
+                                  <div style={{ fontSize: '0.75rem', opacity: 0.3, padding: '2px 0' }}>暂无变动记录</div>
+                                ) : (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    {last7Changes.map((c, index) => (
+                                      <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', opacity: 0.8 }}>
+                                        <span>{c.date}</span>
+                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                          <span style={{ opacity: 0.5 }}>持有: {c.gold.toLocaleString()}</span>
+                                          <span style={{
+                                            fontWeight: '600',
+                                            width: '60px',
+                                            textAlign: 'right',
+                                            color: c.change > 0 ? '#4ade80' : c.change < 0 ? '#f87171' : '#a1a1aa'
+                                          }}>
+                                            {c.change > 0 ? `+${c.change.toLocaleString()}` : c.change.toLocaleString()}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
+            <div className="drawer-footer" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)', padding: '12px 16px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn-secondary" style={{ width: '100%', padding: '10px', borderRadius: '8px', fontSize: '0.9rem' }} onClick={() => setIsGoldHistoryDrawerOpen(false)}>
+                关闭账本
+              </button>
             </div>
           </div>
         </div>

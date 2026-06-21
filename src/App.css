@@ -1476,3 +1476,22 @@
   background: rgba(255, 255, 255, 0.04) !important;
 }
 
+/* ==========================================
+   金币历史与账本样式
+   ========================================== */
+.gold-history-drawer .ledger-tab {
+  transition: all 0.2s ease-in-out;
+}
+.gold-history-drawer .ledger-tab:hover {
+  color: #fbbf24 !important;
+  background: rgba(251, 191, 36, 0.05) !important;
+}
+.gold-history-drawer .glass-panel {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.gold-history-drawer .glass-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
+  border-color: rgba(251, 191, 36, 0.2) !important;
+}
+

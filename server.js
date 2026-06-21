@@ -3,7 +3,7 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { checkAndReset, alignDataStructure } from './reset-check.js';
+import { checkAndReset, alignDataStructure, recordGoldHistory } from './reset-check.js';
 import nodemailer from 'nodemailer';
 
 
@@ -536,6 +536,20 @@ app.post('/api/config', (req, res) => {
     }
   }
 
+  // 同步替换金币历史记录中的角色名
+  if (renameMap && data.goldHistory && Array.isArray(data.goldHistory)) {
+    for (const record of data.goldHistory) {
+      if (record.roles) {
+        for (const [oldName, newName] of Object.entries(renameMap)) {
+          if (oldName !== newName && record.roles[oldName] !== undefined) {
+            record.roles[newName] = record.roles[oldName];
+            delete record.roles[oldName];
+          }
+        }
+      }
+    }
+  }
+
   // 同步替换历史记录文件中的角色名
   if (renameMap && fs.existsSync(historyPath)) {
     try {
@@ -588,6 +602,13 @@ app.post('/api/force-reset', (req, res) => {
   const now = new Date();
 
   if (type === 'daily') {
+    // 强制每日重置时，记录金币快照
+    try {
+      recordGoldHistory(data, now);
+    } catch (err) {
+      console.error('[手动重置] 记录金币历史快照失败:', err);
+    }
+
     for (const role of Object.keys(data.characters)) {
       const char = data.characters[role];
       for (const daily of config.dailies) {
@@ -648,6 +669,15 @@ app.post('/api/history/clear', (req, res) => {
   const { historyPath } = getOrInitUserFiles(req.nickname);
   saveJsonFile(historyPath, []);
   res.json({ success: true });
+});
+
+// 清空金币历史记录接口
+app.post('/api/gold-history/clear', (req, res) => {
+  const { dataPath } = getOrInitUserFiles(req.nickname);
+  const data = readJsonFile(dataPath);
+  data.goldHistory = [];
+  saveJsonFile(dataPath, data);
+  res.json({ success: true, data });
 });
 
 // 手动测试/即时发送邮件备份接口

@@ -44,6 +44,12 @@ export function alignDataStructure(data, config) {
     modified = true;
   }
 
+  // 1.6. 确保 goldHistory 存在
+  if (!data.goldHistory) {
+    data.goldHistory = [];
+    modified = true;
+  }
+
   // 2. 移除不存在于配置中的角色，补充新角色
   const configuredRoles = new Set(config.roles);
   for (const role of Object.keys(data.characters)) {
@@ -133,6 +139,66 @@ export function alignDataStructure(data, config) {
   return modified;
 }
 
+// 记录每日金币快照并计算相比上一次的 change
+export function recordGoldHistory(data, resetTime) {
+  if (!data.goldHistory) {
+    data.goldHistory = [];
+  }
+
+  // 提取账期日期（将重置时间减去 12 小时后格式化为 YYYY-MM-DD）
+  const dateObj = new Date(resetTime);
+  const offsetDate = new Date(dateObj.getTime() - 12 * 60 * 60 * 1000);
+  const year = offsetDate.getFullYear();
+  const month = String(offsetDate.getMonth() + 1).padStart(2, '0');
+  const day = String(offsetDate.getDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`;
+
+  // 检查是否同一天已有记录
+  const todayRecordIndex = data.goldHistory.findIndex(r => r.date === dateStr);
+
+  // 找出上一个周期的记录作为基准计算 change
+  let lastRecord = null;
+  if (data.goldHistory.length > 0) {
+    if (todayRecordIndex !== -1) {
+      lastRecord = data.goldHistory.find(r => r.date !== dateStr);
+    } else {
+      lastRecord = data.goldHistory[0];
+    }
+  }
+
+  const rolesGold = {};
+  for (const role of Object.keys(data.characters)) {
+    const currentGold = Number(data.characters[role].assets?.gold || 0);
+    let lastGold = 0;
+    if (lastRecord && lastRecord.roles && lastRecord.roles[role] !== undefined) {
+      lastGold = Number(lastRecord.roles[role].gold || 0);
+    }
+    const change = currentGold - lastGold;
+    rolesGold[role] = {
+      gold: currentGold,
+      change: change
+    };
+  }
+
+  const newRecord = {
+    date: dateStr,
+    timestamp: dateObj.toISOString(),
+    roles: rolesGold
+  };
+
+  if (todayRecordIndex !== -1) {
+    data.goldHistory[todayRecordIndex] = newRecord;
+  } else {
+    data.goldHistory.unshift(newRecord);
+  }
+
+  // 限制长度最大 365
+  const maxGoldHistory = 365;
+  if (data.goldHistory.length > maxGoldHistory) {
+    data.goldHistory = data.goldHistory.slice(0, maxGoldHistory);
+  }
+}
+
 // 核心检查与重置逻辑
 export function checkAndReset(data, config, now = new Date(), historyPath = null, onWeeklyReset = null) {
   let isChanged = alignDataStructure(data, config);
@@ -151,6 +217,14 @@ export function checkAndReset(data, config, now = new Date(), historyPath = null
   // 1. 检查每日重置
   if (lastDaily < prevDailyResetPoint) {
     console.log(`[重置] 执行每日重置。上次每日重置时间: ${lastDaily.toISOString()}，重置线: ${prevDailyResetPoint.toISOString()}`);
+    
+    // 记录金币快照
+    try {
+      recordGoldHistory(data, prevDailyResetPoint);
+    } catch (err) {
+      console.error('[重置] 记录金币历史快照失败:', err);
+    }
+
     for (const role of Object.keys(data.characters)) {
       const char = data.characters[role];
       for (const daily of config.dailies) {
