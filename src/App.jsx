@@ -1335,7 +1335,26 @@ function App() {
                   // 默认 number 类型
                   return (
                     <tr key={asset.key}>
-                      <td className="col-item-name">{asset.name}</td>
+                      <td className="col-item-name">
+                        {asset.key === 'gold' ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <span>{asset.name}</span>
+                            {(() => {
+                              const total = config.roles.reduce((sum, role) => {
+                                const val = Number(data?.characters?.[role]?.assets?.gold || 0);
+                                return sum + val;
+                              }, 0);
+                              return (
+                                <span className="gold-total-badge" title={`所有角色金币总和: ${total.toLocaleString()}`}>
+                                  共 {total.toLocaleString()}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          asset.name
+                        )}
+                      </td>
                       {config.roles.map(role => {
                         const val = data.characters[role]?.assets?.[asset.key] || 0;
                         return (
