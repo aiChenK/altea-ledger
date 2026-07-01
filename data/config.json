@@ -61,7 +61,8 @@
       "key": "afk",
       "name": "挂机",
       "type": "stage",
-      "maxStage": 4
+      "maxStage": 4,
+      "resetHour": 0
     }
   ],
   "weeklies": [

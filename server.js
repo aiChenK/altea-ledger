@@ -83,10 +83,11 @@ const DEFAULT_CONFIG = {
       type: "boolean"
     },
     {
-      key: "afk",
-      name: "挂机",
-      type: "stage",
-      maxStage: 4
+      "key": "afk",
+      "name": "挂机",
+      "type": "stage",
+      "maxStage": 4,
+      "resetHour": 0
     }
   ],
   weeklies: [
@@ -616,6 +617,17 @@ app.post('/api/force-reset', (req, res) => {
       }
     }
     data.lastDailyReset = now.toISOString();
+    
+    // 更新各小时的分组每日重置时间戳
+    if (!data.lastDailyResets) {
+      data.lastDailyResets = {};
+    }
+    const dailyResetHour = config.resetConfig.dailyResetHour;
+    data.lastDailyResets[dailyResetHour] = now.toISOString();
+    for (const daily of config.dailies) {
+      const hour = daily.resetHour !== undefined ? daily.resetHour : dailyResetHour;
+      data.lastDailyResets[hour] = now.toISOString();
+    }
   } else if (type === 'weekly') {
     // 保存每周历史快照
     try {

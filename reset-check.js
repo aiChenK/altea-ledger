@@ -207,32 +207,58 @@ export function checkAndReset(data, config, now = new Date(), historyPath = null
   const weeklyResetDay = config.resetConfig.weeklyResetDay;
   const weeklyResetHour = config.resetConfig.weeklyResetHour;
 
-  const prevDailyResetPoint = getPrevDailyReset(now, dailyResetHour);
   const prevWeeklyResetPoint = getPrevWeeklyReset(now, weeklyResetDay, weeklyResetHour);
 
   // 获取上一次重置的记录时间
-  const lastDaily = data.lastDailyReset ? new Date(data.lastDailyReset) : new Date(0);
   const lastWeekly = data.lastWeeklyReset ? new Date(data.lastWeeklyReset) : new Date(0);
 
-  // 1. 检查每日重置
-  if (lastDaily < prevDailyResetPoint) {
-    console.log(`[重置] 执行每日重置。上次每日重置时间: ${lastDaily.toISOString()}，重置线: ${prevDailyResetPoint.toISOString()}`);
-    
-    // 记录金币快照
-    try {
-      recordGoldHistory(data, prevDailyResetPoint);
-    } catch (err) {
-      console.error('[重置] 记录金币历史快照失败:', err);
-    }
+  // 1. 检查每日重置（支持不同日常任务有独立的重置小时，如挂机是0点，其他是9点）
+  if (!data.lastDailyResets) {
+    data.lastDailyResets = {};
+  }
+  // 向后兼容旧数据：如果 data.lastDailyReset 存在，则用它初始化默认重置小时的 lastDailyResets
+  if (data.lastDailyReset && !data.lastDailyResets[dailyResetHour]) {
+    data.lastDailyResets[dailyResetHour] = data.lastDailyReset;
+  }
 
-    for (const role of Object.keys(data.characters)) {
-      const char = data.characters[role];
-      for (const daily of config.dailies) {
-        char.dailies[daily.key] = daily.type === 'stage' ? 0 : false;
+  // 收集所有需要检查的重置小时（总是包含全局默认的每日重置小时）
+  const resetHours = new Set();
+  resetHours.add(dailyResetHour);
+  for (const daily of config.dailies) {
+    const hour = daily.resetHour !== undefined ? daily.resetHour : dailyResetHour;
+    resetHours.add(hour);
+  }
+
+  for (const hour of resetHours) {
+    const prevDailyResetPoint = getPrevDailyReset(now, hour);
+    const lastDaily = data.lastDailyResets[hour] ? new Date(data.lastDailyResets[hour]) : new Date(0);
+
+    if (lastDaily < prevDailyResetPoint) {
+      console.log(`[重置] 执行 ${hour} 点的每日重置。上次重置时间: ${lastDaily.toISOString()}，重置线: ${prevDailyResetPoint.toISOString()}`);
+      
+      // 如果触发了主重置时间（全局配置的 dailyResetHour），则需要记录金币快照
+      if (hour === dailyResetHour) {
+        try {
+          recordGoldHistory(data, prevDailyResetPoint);
+        } catch (err) {
+          console.error('[重置] 记录金币历史快照失败:', err);
+        }
+        data.lastDailyReset = prevDailyResetPoint.toISOString();
       }
+
+      // 重置该小时组下的日常任务
+      for (const role of Object.keys(data.characters)) {
+        const char = data.characters[role];
+        for (const daily of config.dailies) {
+          const dailyHour = daily.resetHour !== undefined ? daily.resetHour : dailyResetHour;
+          if (dailyHour === hour) {
+            char.dailies[daily.key] = daily.type === 'stage' ? 0 : false;
+          }
+        }
+      }
+      data.lastDailyResets[hour] = prevDailyResetPoint.toISOString();
+      isChanged = true;
     }
-    data.lastDailyReset = prevDailyResetPoint.toISOString();
-    isChanged = true;
   }
 
   // 2. 检查每周重置

@@ -14,7 +14,7 @@ This is a **high-density, dark frosted glass (Glassmorphism) style** character w
 
 - 🎮 **Multi-Character Management**: Supports displaying multiple characters side-by-side for quick viewing and management on a single screen.
 - ⚡ **Smart Cycle Reset**:
-  - **Daily Reset**: Automatically resets daily states (Attendance, Potion, Daily Quest, Lucky Zone, AFK stage, etc.) every day at **09:00 AM**.
+  - **Daily Reset**: Automatically resets daily states every day at **09:00 AM** by default, with support for configuring independent reset hours for specific tasks (e.g., **00:00 AM** for the "AFK" task).
   - **Weekly Reset**: Automatically resets weekly dungeons/stages every Saturday at **09:00 AM**, creating a historical snapshot beforehand.
   - **Auto Trigger**: No background persistent timers. The backend automatically performs silent resets and data alignment based on client request timestamps.
 - 🦢 **Custom Tracking & Management**:
